@@ -1,0 +1,18 @@
+services:
+  dotnet:
+    build:
+      context: ./backend_dotnet
+      dockerfile: ./FrenCircle.Api/Dockerfile
+    ports:
+      - "5000:8080"
+    env_file:
+      - .env.development
+
+  fastapi:
+    build:
+      context: ./backend_fastapi
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.development

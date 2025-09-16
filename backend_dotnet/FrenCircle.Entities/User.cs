@@ -1,0 +1,46 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace FrenCircle.Entities;
+
+public class User
+{
+    [Key]
+    public Guid Id { get; set; }
+
+    [Required]
+    [Column(TypeName = "citext")]
+    public string Email { get; set; } = null!;
+
+    public bool EmailVerified { get; set; } = false;
+
+    [Required]
+    public string PasswordHash { get; set; } = null!;
+
+    public string? FirstName { get; set; }
+
+    public string? LastName { get; set; }
+
+    public bool VerifiedBadge { get; set; } = false;
+
+    public bool IsActive { get; set; } = true;
+
+    [Column(TypeName = "timestamptz")]
+    public DateTimeOffset CreatedAt { get; set; }
+
+    [Column(TypeName = "timestamptz")]
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    [Column(TypeName = "timestamptz")]
+    public DateTimeOffset? DeletedAt { get; set; }
+
+    // Navigation properties
+    public Profile? Profile { get; set; }
+    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public ICollection<ExternalLogin> ExternalLogins { get; set; } = new List<ExternalLogin>();
+    public ICollection<Session> Sessions { get; set; } = new List<Session>();
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public ICollection<TwoFactorMethod> TwoFactorMethods { get; set; } = new List<TwoFactorMethod>();
+    public ICollection<TwoFactorCode> TwoFactorCodes { get; set; } = new List<TwoFactorCode>();
+    public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+}
