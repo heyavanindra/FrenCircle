@@ -19,7 +19,8 @@ namespace FrenCircle.Contracts.Responses
       );
 
     public sealed record HealthStatus(
-        string Status, 
-        DateTimeOffset Time
+        string Status,
+        DateTimeOffset Time,
+        string? Test
         );
 }

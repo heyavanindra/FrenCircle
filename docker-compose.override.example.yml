@@ -1,0 +1,23 @@
+services:
+  fastapi:
+    # Bind-mount the source for live reload during development
+    volumes:
+      - ./backend_fastapi:/app:rw
+    # Override the container command to run uvicorn with reload (dev-only)
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+  dotnet:
+    # For development we use the SDK image and mount the source into /src so
+    # `dotnet watch` can run inside the container with live reload.
+    image: mcr.microsoft.com/dotnet/sdk:9.0
+    volumes:
+      # Mount the entire backend_dotnet workspace so builds and tools work
+      - ./backend_dotnet:/src:rw
+      # Persist local logs into the repo's logs folder
+      - ./logs/dotnet:/app/logs/dotnet:rw
+    working_dir: /src/FrenCircle.Api
+    command: dotnet watch run --urls "http://0.0.0.0:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+    ports:
+      - "5000:8080"

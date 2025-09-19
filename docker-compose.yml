@@ -6,13 +6,28 @@ services:
     ports:
       - "5000:8080"
     env_file:
-      - .env.development
+      - .env
+    volumes:
+      - /home/jassi/deployments/FrenCircleMonoRepo/logs/dotnet:/app/logs/dotnet
 
   fastapi:
     build:
       context: ./backend_fastapi
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8001"
     env_file:
-      - .env.development
+      - .env
+  nextjs:
+    build:
+      context: ./frontend_nextjs
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    # Uncomment and add environment variables as needed
+    # environment:
+    #   - NEXT_PUBLIC_API_URL=http://localhost:8000
+    #   - DATABASE_URL=your_database_url

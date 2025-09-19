@@ -1,0 +1,131 @@
+name: Deploy (conditional compose + git reset/pull)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Trust remote host
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Push events → detect which folders changed
+      - name: Detect changed paths
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        id: detect_changes
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            dotnet:
+              - 'backend_dotnet/**'
+            fastapi:
+              - 'backend_fastapi/**'
+            nextjs:
+              - 'frontend_nextjs/**'   # ← adjust if your Next.js folder differs
+
+      # Manual runs → force all three true
+      - name: Force services on manual run
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: force_changes
+        run: |
+          echo "dotnet=true"  >> "$GITHUB_OUTPUT"
+          echo "fastapi=true" >> "$GITHUB_OUTPUT"
+          echo "nextjs=true"  >> "$GITHUB_OUTPUT"
+
+      # Normalize outputs
+      - name: Set change outputs
+        id: changes
+        run: |
+          DOTNET="${{ steps.detect_changes.outputs.dotnet || steps.force_changes.outputs.dotnet }}"
+          FASTAPI="${{ steps.detect_changes.outputs.fastapi || steps.force_changes.outputs.fastapi }}"
+          NEXTJS="${{ steps.detect_changes.outputs.nextjs  || steps.force_changes.outputs.nextjs  }}"
+          echo "dotnet=$DOTNET"   >> "$GITHUB_OUTPUT"
+          echo "fastapi=$FASTAPI" >> "$GITHUB_OUTPUT"
+          echo "nextjs=$NEXTJS"   >> "$GITHUB_OUTPUT"
+
+      - name: Deploy changed services
+        if: ${{ steps.changes.outputs.dotnet == 'true' || steps.changes.outputs.fastapi == 'true' || steps.changes.outputs.nextjs == 'true' }}
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+          DOTNET_CHANGED:  ${{ steps.changes.outputs.dotnet }}
+          FASTAPI_CHANGED: ${{ steps.changes.outputs.fastapi }}
+          NEXTJS_CHANGED:  ${{ steps.changes.outputs.nextjs }}
+        run: |
+          set -euo pipefail
+          PORT="${SSH_PORT:-22}"
+          DEST="${SSH_USER}@${SSH_HOST}"
+          echo "dotnet changed?  $DOTNET_CHANGED"
+          echo "fastapi changed? $FASTAPI_CHANGED"
+          echo "nextjs changed?  $NEXTJS_CHANGED"
+
+          ssh -p "$PORT" "$DEST" "REMOTE_DIR='${REMOTE_DIR}' DOTNET_CHANGED='${DOTNET_CHANGED}' FASTAPI_CHANGED='${FASTAPI_CHANGED}' NEXTJS_CHANGED='${NEXTJS_CHANGED}' bash -s" <<'SH'
+          set -euo pipefail
+          cd "$REMOTE_DIR"
+
+          # Sync repo to main
+          if [ ! -d .git ]; then
+            echo "ERROR: No git repo at $(pwd)"; exit 1
+          fi
+          git fetch --all --prune
+          if git rev-parse --verify main >/dev/null 2>&1; then
+            git checkout -f main || git switch -f main
+          else
+            git switch -C main
+          fi
+          git reset --hard
+          git clean -fd -e logs/
+          git pull --ff-only
+
+          # Build list of services to (re)deploy
+          services=""
+          if [ "${DOTNET_CHANGED}"  = "true" ]; then services="$services dotnet";  fi
+          if [ "${FASTAPI_CHANGED}" = "true" ]; then services="$services fastapi"; fi
+          if [ "${NEXTJS_CHANGED}"  = "true" ]; then services="$services nextjs";  fi
+
+          if [ -z "$services" ]; then
+            echo "No relevant changes; skipping docker compose."
+            exit 0
+          fi
+
+          echo "Bringing up services: $services"
+          DOCKER_BUILDKIT=1 docker compose -p frencircle up -d --build --remove-orphans $services
+          docker compose -p frencircle ps
+          SH
+
+      - name: Nothing to deploy (no relevant path changes)
+        if: ${{ steps.changes.outputs.dotnet != 'true' && steps.changes.outputs.fastapi != 'true' && steps.changes.outputs.nextjs != 'true' }}
+        run: echo "No changes in backend_dotnet/, backend_fastapi/, or frontend_nextjs/ — skipping."
+
+      - name: Show recent service logs
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
+        run: |
+          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" \
+            "cd '$REMOTE_DIR' && docker compose -p frencircle logs --since=5m || true"

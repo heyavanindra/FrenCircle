@@ -29,11 +29,11 @@ COPY . /app
 USER appuser
 
 # Expose uvicorn port
-EXPOSE 8000
+EXPOSE 8001
 
 # Healthcheck (optional)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=20s CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s CMD curl -f http://localhost:8001/health || exit 1
 
 # Start with gunicorn+uvicorn workers (good defaults; tune workers for CPU)
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "main:app", \
-     "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "60"]
+     "--bind", "0.0.0.0:8001", "--workers", "2", "--threads", "4", "--timeout", "60"]

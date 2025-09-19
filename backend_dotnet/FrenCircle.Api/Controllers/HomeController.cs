@@ -10,10 +10,12 @@ namespace FrenCircle.Api.Controllers;
 public sealed class HomeController : BaseApiController
 {
     private readonly ILogger<HomeController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public HomeController(ILogger<HomeController> logger)
+    public HomeController(ILogger<HomeController> logger, IConfiguration configuration)
     {
         _logger = logger;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -29,7 +31,7 @@ public sealed class HomeController : BaseApiController
         var uptime = DateTimeOffset.UtcNow - startUtc;
 
         var info = new ServerInfo(
-            Machine: Environment.MachineName,
+            Machine: Environment.MachineName + "falana dhimkana",
             OS: RuntimeInformation.OSDescription,
             OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
             ProcessArchitecture: RuntimeInformation.ProcessArchitecture.ToString(),
@@ -60,7 +62,13 @@ public sealed class HomeController : BaseApiController
                 throw new InvalidOperationException("Database is not reachable");
             }
 
-            var payload = new HealthStatus("Healthy", DateTimeOffset.UtcNow);
+             _logger.LogError(null,
+                "Intentional error log 2 {Time} with CorrelationId {CorrelationId}",
+                DateTimeOffset.UtcNow,
+                CorrelationId);
+
+            var testVal = _configuration["PyUrl"];
+            var payload = new HealthStatus("Healthy and stuff 2", DateTimeOffset.UtcNow, testVal);
             return OkEnvelope(payload);
         }
         catch (Exception ex)

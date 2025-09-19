@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+import os
 
 app = FastAPI()
 
@@ -12,7 +13,9 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    # Read TEST environment variable (provided via Docker Compose env_file)
+    test_val = os.environ.get("TEST")
+    return {"status": "ok", "TEST": test_val}
 
 
 @app.get("/", response_class=HTMLResponse)
