@@ -21,6 +21,21 @@ public class User
 
     public string? LastName { get; set; }
 
+    // Profile fields (consolidated from separate Profile entity)
+    [Required]
+    [Column(TypeName = "citext")]
+    public string Username { get; set; } = null!;
+
+    public string? DisplayName { get; set; }
+
+    public string? Bio { get; set; }
+
+    public string? AvatarUrl { get; set; }
+
+    public string? Timezone { get; set; }
+
+    public string? Locale { get; set; }
+
     public bool VerifiedBadge { get; set; } = false;
 
     public bool IsActive { get; set; } = true;
@@ -33,9 +48,6 @@ public class User
 
     [Column(TypeName = "timestamptz")]
     public DateTimeOffset? DeletedAt { get; set; }
-
-    // Navigation properties
-    public Profile? Profile { get; set; }
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public ICollection<ExternalLogin> ExternalLogins { get; set; } = new List<ExternalLogin>();
     public ICollection<Session> Sessions { get; set; } = new List<Session>();

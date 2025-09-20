@@ -1,0 +1,41 @@
+namespace FrenCircle.Contracts.Responses;
+
+public sealed record AuthResponse(
+    string AccessToken,
+    string RefreshToken,
+    DateTimeOffset ExpiresAt,
+    UserInfo User
+);
+
+public sealed record UserInfo(
+    Guid Id,
+    string Email,
+    bool EmailVerified,
+    string? Username,
+    string? FirstName,
+    string? LastName,
+    string? AvatarUrl,
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<string> Roles
+);
+
+public sealed record RefreshTokenResponse(
+    string AccessToken,
+    string RefreshToken,
+    DateTimeOffset ExpiresAt
+);
+
+public sealed record LogoutResponse(
+    string Message,
+    DateTimeOffset LoggedOutAt
+);
+
+public sealed record VerificationSentResponse(
+    string Message,
+    DateTimeOffset SentAt
+);
+
+public sealed record PasswordResetResponse(
+    string Message,
+    DateTimeOffset ResetAt
+);

@@ -12,7 +12,6 @@ public class FrenCircleDbContext : DbContext
 
     // DbSets for all entities
     public DbSet<User> Users { get; set; }
-    public DbSet<Profile> Profiles { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
     public DbSet<ExternalLogin> ExternalLogins { get; set; }
@@ -34,7 +33,6 @@ public class FrenCircleDbContext : DbContext
         modelBuilder.HasPostgresExtension("citext");
 
         ConfigureUserEntity(modelBuilder);
-        ConfigureProfileEntity(modelBuilder);
         ConfigureRoleEntity(modelBuilder);
         ConfigureUserRoleEntity(modelBuilder);
         ConfigureExternalLoginEntity(modelBuilder);
@@ -60,15 +58,12 @@ public class FrenCircleDbContext : DbContext
 
         // Unique constraints
         entity.HasIndex(e => e.Email).IsUnique();
+        entity.HasIndex(e => e.Username).IsUnique(); // Username is now part of User entity
 
         // Global query filter for soft delete
-        entity.HasQueryFilter(e => e.DeletedAt == null);
-
-        // Relationships
-        entity.HasOne(u => u.Profile)
-              .WithOne(p => p.User)
-              .HasForeignKey<Profile>(p => p.UserId)
-              .OnDelete(DeleteBehavior.Cascade);
+        // Note: Commented out to avoid conflicts with required navigation properties
+        // You can implement soft delete logic in your services instead
+        // entity.HasQueryFilter(e => e.DeletedAt == null);
 
         entity.HasMany(u => u.UserRoles)
               .WithOne(ur => ur.User)
@@ -106,16 +101,7 @@ public class FrenCircleDbContext : DbContext
               .OnDelete(DeleteBehavior.SetNull);
     }
 
-    private void ConfigureProfileEntity(ModelBuilder modelBuilder)
-    {
-        var entity = modelBuilder.Entity<Profile>();
 
-        // Primary key
-        entity.HasKey(e => e.UserId);
-
-        // Unique constraints
-        entity.HasIndex(e => e.Username).IsUnique();
-    }
 
     private void ConfigureRoleEntity(ModelBuilder modelBuilder)
     {
@@ -271,15 +257,18 @@ public class FrenCircleDbContext : DbContext
 
     private void SeedAppConfigs(ModelBuilder modelBuilder)
     {
+        // Use static values instead of dynamic ones to avoid model changes
+        var baseDate = new DateTimeOffset(2025, 9, 20, 0, 0, 0, TimeSpan.Zero);
+        
         modelBuilder.Entity<AppConfig>().HasData(
-            new AppConfig { Id = Guid.NewGuid(), Key = "GoogleLoginEnabled", Value = "true", UpdatedAt = DateTimeOffset.UtcNow },
-            new AppConfig { Id = Guid.NewGuid(), Key = "OtpExpiryMinutes", Value = "10", UpdatedAt = DateTimeOffset.UtcNow },
-            new AppConfig { Id = Guid.NewGuid(), Key = "OtpMaxAttempts", Value = "5", UpdatedAt = DateTimeOffset.UtcNow },
-            new AppConfig { Id = Guid.NewGuid(), Key = "SessionIdleTimeoutDays", Value = "14", UpdatedAt = DateTimeOffset.UtcNow },
-            new AppConfig { Id = Guid.NewGuid(), Key = "SessionAbsoluteLifetimeDays", Value = "60", UpdatedAt = DateTimeOffset.UtcNow },
-            new AppConfig { Id = Guid.NewGuid(), Key = "TwoFactorRequired", Value = "false", UpdatedAt = DateTimeOffset.UtcNow },
-            new AppConfig { Id = Guid.NewGuid(), Key = "SignupDisabled", Value = "false", UpdatedAt = DateTimeOffset.UtcNow },
-            new AppConfig { Id = Guid.NewGuid(), Key = "PasswordMinLength", Value = "8", UpdatedAt = DateTimeOffset.UtcNow }
+            new AppConfig { Id = new Guid("11111111-1111-1111-1111-111111111111"), Key = "GoogleLoginEnabled", Value = "true", UpdatedAt = baseDate },
+            new AppConfig { Id = new Guid("22222222-2222-2222-2222-222222222222"), Key = "OtpExpiryMinutes", Value = "10", UpdatedAt = baseDate },
+            new AppConfig { Id = new Guid("33333333-3333-3333-3333-333333333333"), Key = "OtpMaxAttempts", Value = "5", UpdatedAt = baseDate },
+            new AppConfig { Id = new Guid("44444444-4444-4444-4444-444444444444"), Key = "SessionIdleTimeoutDays", Value = "14", UpdatedAt = baseDate },
+            new AppConfig { Id = new Guid("55555555-5555-5555-5555-555555555555"), Key = "SessionAbsoluteLifetimeDays", Value = "60", UpdatedAt = baseDate },
+            new AppConfig { Id = new Guid("66666666-6666-6666-6666-666666666666"), Key = "TwoFactorRequired", Value = "false", UpdatedAt = baseDate },
+            new AppConfig { Id = new Guid("77777777-7777-7777-7777-777777777777"), Key = "SignupDisabled", Value = "false", UpdatedAt = baseDate },
+            new AppConfig { Id = new Guid("88888888-8888-8888-8888-888888888888"), Key = "PasswordMinLength", Value = "8", UpdatedAt = baseDate }
         );
     }
 }

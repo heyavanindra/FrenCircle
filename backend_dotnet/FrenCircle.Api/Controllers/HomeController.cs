@@ -31,7 +31,7 @@ public sealed class HomeController : BaseApiController
         var uptime = DateTimeOffset.UtcNow - startUtc;
 
         var info = new ServerInfo(
-            Machine: Environment.MachineName + "falana dhimkana",
+            Machine: Environment.MachineName,
             OS: RuntimeInformation.OSDescription,
             OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
             ProcessArchitecture: RuntimeInformation.ProcessArchitecture.ToString(),

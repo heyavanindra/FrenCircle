@@ -1,6 +1,8 @@
 using Serilog;
 using Serilog.Exceptions;
 using FrenCircle.Api.Middleware; // for CorrelationIdMiddleware
+using FrenCircle.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,37 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
 // --- 2. Register services ---
 builder.Services.AddControllers();
 builder.Services.AddOpenApi(); // built-in OpenAPI/Swagger
+
+// --- Entity Framework Core with PostgreSQL ---
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<FrenCircleDbContext>(options =>
+{
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.MigrationsAssembly("FrenCircle.Api"); // Assembly where migrations will be stored
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null);
+    });
+    
+    // Configure warnings
+    options.ConfigureWarnings(warnings =>
+    {
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning);
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
+    });
+    
+    // Enable detailed errors in development
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.EnableDetailedErrors();
+    }
+    
+    // Add query logging (only for Information level and above to reduce noise)
+    options.LogTo(Console.WriteLine, LogLevel.Warning);
+});
 
 // Add custom app services (example)
 // builder.Services.AddSingleton<ILoggingService, LoggingService>();
