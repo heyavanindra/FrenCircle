@@ -101,8 +101,6 @@ public class FrenCircleDbContext : DbContext
               .OnDelete(DeleteBehavior.SetNull);
     }
 
-
-
     private void ConfigureRoleEntity(ModelBuilder modelBuilder)
     {
         var entity = modelBuilder.Entity<Role>();
