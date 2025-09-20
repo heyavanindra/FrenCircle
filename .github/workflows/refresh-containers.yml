@@ -2,40 +2,6 @@ name: Refresh containers (manual)
 
 on:
   workflow_dispatch:
-    inputs:
-      refresh_mode:
-        description: "How to refresh"
-        type: choice
-        required: true
-        options:
-          - recreate_only      # reload env, no image rebuild
-          - rebuild_images     # rebuild + reload env
-        default: recreate_only
-      pull_repo:
-        description: "git fetch/pull before refresh?"
-        type: boolean
-        default: false
-      all_services:
-        description: "Operate on ALL services? (overrides individual toggles)"
-        type: boolean
-        default: true
-      dotnet:
-        description: "Include dotnet service"
-        type: boolean
-        default: true
-      fastapi:
-        description: "Include fastapi service"
-        type: boolean
-        default: true
-      nextjs:
-        description: "Include nextjs service"
-        type: boolean
-        default: true
-      env_file:
-        description: "Optional compose --env-file path (leave blank to use default .env)"
-        type: string
-        required: false
-        default: ""
 
 jobs:
   refresh:
@@ -55,86 +21,19 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Compute service list
-        id: svc
-        run: |
-          if [ "${{ github.event.inputs.all_services }}" = "true" ]; then
-            echo "services=dotnet fastapi nextjs" >> "$GITHUB_OUTPUT"
-          else
-            S=""
-            [ "${{ github.event.inputs.dotnet }}"  = "true" ] && S="$S dotnet"
-            [ "${{ github.event.inputs.fastapi }}" = "true" ] && S="$S fastapi"
-            [ "${{ github.event.inputs.nextjs }}"  = "true" ] && S="$S nextjs"
-            # default to all if user accidentally unchecked all
-            if [ -z "$S" ]; then S="dotnet fastapi nextjs"; fi
-            echo "services=$S" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Refresh containers on server
+      - name: Refresh containers
         env:
-          SSH_HOST:   ${{ secrets.SSH_HOST }}
-          SSH_PORT:   ${{ secrets.SSH_PORT }}
-          SSH_USER:   ${{ secrets.SSH_USER }}
+          SSH_HOST:  ${{ secrets.SSH_HOST }}
+          SSH_PORT:  ${{ secrets.SSH_PORT }}
+          SSH_USER:  ${{ secrets.SSH_USER }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
-          MODE:       ${{ github.event.inputs.refresh_mode }}
-          PULL:       ${{ github.event.inputs.pull_repo }}
-          SERVICES:   ${{ steps.svc.outputs.services }}
-          ENV_FILE:   ${{ github.event.inputs.env_file }}
         run: |
           set -euo pipefail
-          PORT="${SSH_PORT:-22}"
-          DEST="${SSH_USER}@${SSH_HOST}"
+          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "cd '${REMOTE_DIR}' && \
+            docker compose -p frencircle up -d --force-recreate --remove-orphans && \
+            docker compose -p frencircle ps"
 
-          echo "Mode:       $MODE"
-          echo "Pull repo?: $PULL"
-          echo "Services:   $SERVICES"
-          [ -n "$ENV_FILE" ] && echo "Env file:   $ENV_FILE" || echo "Env file:   (compose default .env)"
-
-          ssh -p "$PORT" "$DEST" "REMOTE_DIR='${REMOTE_DIR}' MODE='${MODE}' PULL='${PULL}' SERVICES='${SERVICES}' ENV_FILE='${ENV_FILE}' bash -s" <<'SH'
-          set -euo pipefail
-          cd "$REMOTE_DIR"
-
-          if [ "${PULL}" = "true" ]; then
-            if [ ! -d .git ]; then
-              echo "WARN: no .git repo found at $(pwd); skipping git pull"
-            else
-              git fetch --all --prune
-              if git rev-parse --verify main >/dev/null 2>&1; then
-                git checkout -f main || git switch -f main
-              else
-                git switch -C main
-              fi
-              git reset --hard
-              git clean -fd -e logs/
-              git pull --ff-only || true
-            fi
-          fi
-
-          # Build base docker compose command
-          CMD=(docker compose -p frencircle)
-          # Optional env file
-          if [ -n "${ENV_FILE}" ]; then
-            CMD+=("--env-file" "${ENV_FILE}")
-          fi
-
-          # Decide flags based on mode
-          # recreate_only => force recreate running containers to load new env
-          # rebuild_images => rebuild images and recreate
-          if [ "${MODE}" = "rebuild_images" ]; then
-            EXTRA_FLAGS=(up -d --build --force-recreate --remove-orphans)
-          else
-            EXTRA_FLAGS=(up -d --force-recreate --no-build --remove-orphans)
-          fi
-
-          echo "Running: \${CMD[@]} \${EXTRA_FLAGS[@]} ${SERVICES}"
-          "\${CMD[@]}" "\${EXTRA_FLAGS[@]}" ${SERVICES}
-
-          echo
-          echo "Current status:"
-          docker compose -p frencircle ps
-          SH
-
-      - name: Tail recent logs (5m)
+      - name: Show recent logs
         if: always()
         env:
           SSH_HOST:  ${{ secrets.SSH_HOST }}
@@ -143,4 +42,4 @@ jobs:
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" \
-            "cd '$REMOTE_DIR' && docker compose -p frencircle logs --since=5m || true"
+            "cd '${REMOTE_DIR}' && docker compose -p frencircle logs --since=5m || true"
