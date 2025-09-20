@@ -1,3 +1,4 @@
+using FrenCircle.Api.Configuration;
 using FrenCircle.Api.Data;
 using FrenCircle.Api.Services;
 using FrenCircle.Contracts;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace FrenCircle.Api.Controllers;
 
@@ -18,17 +20,20 @@ public sealed class AuthController : BaseApiController
     private readonly FrenCircleDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly IJwtService _jwtService;
+    private readonly HttpClient _httpClient;
 
     public AuthController(
         ILogger<AuthController> logger, 
         FrenCircleDbContext context,
         IConfiguration configuration,
-        IJwtService jwtService)
+        IJwtService jwtService,
+        HttpClient httpClient)
     {
         _logger = logger;
         _context = context;
         _configuration = configuration;
         _jwtService = jwtService;
+        _httpClient = httpClient;
     }
 
     /// <summary>
@@ -577,4 +582,330 @@ public sealed class AuthController : BaseApiController
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes).Replace("+", "").Replace("/", "").Replace("=", "")[..8];
     }
+
+    /// <summary>
+    /// Initiate Google OAuth flow
+    /// </summary>
+    [HttpGet("google")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public IActionResult GoogleLogin()
+    {
+        _logger.LogInformation("Initiating Google OAuth flow with CorrelationId {CorrelationId}", CorrelationId);
+
+        var googleSettings = _configuration.GetSection("OAuth:Google").Get<GoogleOAuthSettings>();
+        
+        if (googleSettings == null || string.IsNullOrEmpty(googleSettings.ClientId))
+        {
+            _logger.LogError("Google OAuth settings not configured");
+            return BadRequestProblem("Google OAuth not configured");
+        }
+
+        var state = Guid.NewGuid().ToString();
+        
+        var authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
+                      $"?client_id={Uri.EscapeDataString(googleSettings.ClientId)}" +
+                      $"&redirect_uri={Uri.EscapeDataString(googleSettings.RedirectUri)}" +
+                      $"&response_type=code" +
+                      $"&scope={Uri.EscapeDataString("openid profile email")}" +
+                      $"&access_type=offline" +
+                      $"&state={state}";
+
+        return Ok(new ApiResponse<object>(new { AuthUrl = authUrl }));
+    }
+
+    /// <summary>
+    /// Handle Google OAuth callback
+    /// </summary>
+    [HttpGet("google/callback")]
+    [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GoogleCallback(string code, string state, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Processing Google OAuth callback with CorrelationId {CorrelationId}", CorrelationId);
+
+        try
+        {
+            // Basic validation - in production you might want to store/validate state more securely
+            if (string.IsNullOrEmpty(state) || string.IsNullOrEmpty(code))
+            {
+                _logger.LogWarning("Missing OAuth parameters");
+                return BadRequestProblem("Missing OAuth parameters");
+            }
+
+            var googleSettings = _configuration.GetSection("OAuth:Google").Get<GoogleOAuthSettings>();
+            if (googleSettings == null)
+            {
+                return BadRequestProblem("Google OAuth not configured");
+            }
+
+            // Exchange code for access token
+            var tokenResponse = await ExchangeCodeForGoogleToken(code, googleSettings, cancellationToken);
+            if (tokenResponse == null)
+            {
+                return BadRequestProblem("Failed to exchange code for token");
+            }
+
+            // Get user info from Google
+            var googleUser = await GetGoogleUserInfo(tokenResponse.AccessToken, cancellationToken);
+            if (googleUser == null)
+            {
+                return BadRequestProblem("Failed to get user info from Google");
+            }
+
+            // Find or create user
+            var user = await FindOrCreateGoogleUser(googleUser, cancellationToken);
+            
+            // Generate JWT and refresh token
+            var authResponse = await GenerateAuthResponse(user, "Google", cancellationToken);
+
+            _logger.LogInformation("Google OAuth login successful for user {UserId}", user.Id);
+            return Ok(new ApiResponse<AuthResponse>(authResponse));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing Google OAuth callback");
+            return BadRequestProblem("OAuth authentication failed");
+        }
+    }
+
+    private async Task<GoogleTokenResponse?> ExchangeCodeForGoogleToken(string code, GoogleOAuthSettings settings, CancellationToken cancellationToken)
+    {
+        var tokenRequest = new FormUrlEncodedContent(new[]
+        {
+            new KeyValuePair<string, string>("client_id", settings.ClientId),
+            new KeyValuePair<string, string>("client_secret", settings.ClientSecret),
+            new KeyValuePair<string, string>("code", code),
+            new KeyValuePair<string, string>("grant_type", "authorization_code"),
+            new KeyValuePair<string, string>("redirect_uri", settings.RedirectUri)
+        });
+
+        var response = await _httpClient.PostAsync("https://oauth2.googleapis.com/token", tokenRequest, cancellationToken);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Failed to exchange code for Google token. Status: {StatusCode}", response.StatusCode);
+            return null;
+        }
+
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        return JsonSerializer.Deserialize<GoogleTokenResponse>(content, new JsonSerializerOptions 
+        { 
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+        });
+    }
+
+    private async Task<GoogleUserInfo?> GetGoogleUserInfo(string accessToken, CancellationToken cancellationToken)
+    {
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+
+        var response = await _httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo", cancellationToken);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Failed to get Google user info. Status: {StatusCode}", response.StatusCode);
+            return null;
+        }
+
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        return JsonSerializer.Deserialize<GoogleUserInfo>(content, new JsonSerializerOptions 
+        { 
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+        });
+    }
+
+    private async Task<User> FindOrCreateGoogleUser(GoogleUserInfo googleUser, CancellationToken cancellationToken)
+    {
+        // First, check if user exists by external login
+        var existingExternalLogin = await _context.ExternalLogins
+            .Include(el => el.User)
+                .ThenInclude(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(el => el.Provider == "google" && el.ProviderUserId == googleUser.Id, cancellationToken);
+
+        if (existingExternalLogin != null)
+        {
+            _logger.LogInformation("Found existing Google user {UserId}", existingExternalLogin.User.Id);
+            return existingExternalLogin.User;
+        }
+
+        // Check if user exists by email
+        var existingUser = await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Email == googleUser.Email, cancellationToken);
+
+        if (existingUser != null)
+        {
+            // Link Google account to existing user
+            var externalLogin = new ExternalLogin
+            {
+                Id = Guid.NewGuid(),
+                UserId = existingUser.Id,
+                Provider = "google",
+                ProviderUserId = googleUser.Id,
+                ProviderEmail = googleUser.Email,
+                LinkedAt = DateTimeOffset.UtcNow
+            };
+
+            _context.ExternalLogins.Add(externalLogin);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Linked Google account to existing user {UserId}", existingUser.Id);
+            return existingUser;
+        }
+
+        // Create new user
+        var newUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = googleUser.Email,
+            EmailVerified = googleUser.VerifiedEmail, // Google already verified the email
+            PasswordHash = GenerateRandomHash(), // They won't use password login
+            FirstName = googleUser.GivenName,
+            LastName = googleUser.FamilyName,
+            Username = await GenerateUniqueUsername(googleUser.Name ?? googleUser.Email.Split('@')[0], cancellationToken),
+            DisplayName = googleUser.Name,
+            AvatarUrl = googleUser.Picture,
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+
+        _context.Users.Add(newUser);
+
+        // Add external login record
+        var newExternalLogin = new ExternalLogin
+        {
+            Id = Guid.NewGuid(),
+            UserId = newUser.Id,
+            Provider = "google",
+            ProviderUserId = googleUser.Id,
+            ProviderEmail = googleUser.Email,
+            LinkedAt = DateTimeOffset.UtcNow
+        };
+
+        _context.ExternalLogins.Add(newExternalLogin);
+
+        // Assign default user role (match the registration pattern)
+        var defaultRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "user", cancellationToken);
+        if (defaultRole != null)
+        {
+            _context.UserRoles.Add(new UserRole
+            {
+                UserId = newUser.Id,
+                RoleId = defaultRole.Id
+            });
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Created new user from Google OAuth {UserId}", newUser.Id);
+        return newUser;
+    }
+
+    private async Task<AuthResponse> GenerateAuthResponse(User user, string authMethod, CancellationToken cancellationToken)
+    {
+        // Create session
+        var session = new Session
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            AuthMethod = authMethod,
+            UserAgent = Request.Headers.UserAgent.ToString() ?? "Unknown",
+            IpAddress = HttpContext.Connection.RemoteIpAddress ?? System.Net.IPAddress.Loopback,
+            CreatedAt = DateTimeOffset.UtcNow,
+            LastSeenAt = DateTimeOffset.UtcNow
+        };
+
+        _context.Sessions.Add(session);
+
+        // Create refresh token
+        var refreshTokenValue = GenerateRefreshToken();
+        var refreshToken = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            SessionId = session.Id,
+            TokenHash = HashPassword(refreshTokenValue),
+            FamilyId = Guid.NewGuid(),
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            IssuedAt = DateTimeOffset.UtcNow
+        };
+
+        _context.RefreshTokens.Add(refreshToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Generate JWT
+        var accessToken = _jwtService.GenerateToken(user);
+
+        // Set refresh token cookie
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = refreshToken.ExpiresAt
+        };
+        Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
+
+        var userInfo = new UserInfo(
+            user.Id,
+            user.Email,
+            user.EmailVerified,
+            user.Username,
+            user.FirstName,
+            user.LastName,
+            user.AvatarUrl,
+            user.CreatedAt,
+            user.UserRoles.Select(ur => ur.Role.Name).ToArray()
+        );
+
+        return new AuthResponse(accessToken, null, DateTimeOffset.UtcNow.AddMinutes(15), userInfo);
+    }
+
+    private async Task<string> GenerateUniqueUsername(string baseName, CancellationToken cancellationToken)
+    {
+        // Clean the base name
+        var cleanName = baseName.Replace(" ", "").Replace(".", "").ToLower();
+        if (string.IsNullOrEmpty(cleanName)) cleanName = "user";
+
+        var username = cleanName;
+        var counter = 1;
+
+        while (await _context.Users.AnyAsync(u => u.Username == username, cancellationToken))
+        {
+            username = $"{cleanName}{counter}";
+            counter++;
+        }
+
+        return username;
+    }
+
+    private static string GenerateRandomHash()
+    {
+        var randomBytes = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+        return Convert.ToBase64String(randomBytes);
+    }
+
+    // Google API response models
+    private record GoogleTokenResponse(
+        string AccessToken,
+        string RefreshToken,
+        int ExpiresIn,
+        string TokenType
+    );
+
+    private record GoogleUserInfo(
+        string Id,
+        string Email,
+        bool VerifiedEmail,
+        string Name,
+        string GivenName,
+        string FamilyName,
+        string Picture,
+        string Locale
+    );
 }

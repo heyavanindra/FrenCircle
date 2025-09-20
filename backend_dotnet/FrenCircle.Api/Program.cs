@@ -115,8 +115,9 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Register JWT service
+// Register services
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddHttpClient();
 
 // Add custom app services (example)
 // builder.Services.AddSingleton<ILoggingService, LoggingService>();
