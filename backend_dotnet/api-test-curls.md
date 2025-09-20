@@ -1,49 +1,18 @@
-# FrenCircle API - Authen## 3. User Login (with Email)
-curl -X POST "{{dotnet}}/auth/login" \
-  -H "Content-Type: applicati### Step 3: Login after verification (with email)
-LOGIN_RESPONSE=$(curl -s -X POST "{{dotnet}}/auth/login" \
-  -H "Content-Type: application/json" \
-  -H "X-Correlation-Id: flow-login-$(date +%s)" \
-  -d '{
-    "emailOrUsername": "testuser@example.com",
-    "password": "TestPassword123!",
-    "deviceName": "Test Device",
-    "deviceType": "API Client",
-    "rememberMe": false
-  }')
+# FrenCircle API - Authentication Endpoints (JWT)
 
-### Step 3b: Login with username
-LOGIN_RESPONSE=$(curl -s -X POST "{{dotnet}}/auth/login" \
-  -H "Content-Type: application/json" \
-  -H "X-Correlation-Id: flow-login-$(date +%s)" \
-  -d '{
-    "emailOrUsername": "testuser",
-    "password": "TestPassword123!",
-    "deviceName": "Test Device",
-    "deviceType": "API Client",
-    "rememberMe": false
-  }')
-  -H "X-Correlation-Id: login-$(date +%s)" \
-  -d '{
-    "emailOrUsername": "john.doe@example.com",
-    "password": "SecurePass123!",
-    "deviceName": "My Laptop",
-    "deviceType": "Desktop",
-    "rememberMe": false
-  }'
+## Setup
+Set your host variable: 
+```bash
+dotnet=http://localhost:5000  # or dotnet=https://localhost:5001
+```
 
-## 3b. User Login (with Username)
-curl -X POST "{{dotnet}}/auth/login" \
-  -H "Content-Type: application/json" \
-  -H "X-Correlation-Id: login-$(date +%s)" \
-  -d '{
-    "emailOrUsername": "johndoe",
-    "password": "SecurePass123!",
-    "deviceName": "My Laptop",
-    "deviceType": "Desktop",
-    "rememberMe": false
-  }'dpoints
-# Set your host variable: dotnet=http://localhost:5000 or dotnet=https://localhost:5001
+## JWT Authentication
+This API now uses JWT tokens for authentication. Login and refresh endpoints return:
+- `accessToken`: JWT token for API authentication (15 min expiry)
+- `refreshToken`: Long-lived token to get new access tokens (7-14 days)
+- `expiresAt`: When the access token expires
+
+Use the JWT token in Authorization header: `Authorization: Bearer <accessToken>`
 
 ## 1. User Registration
 curl -X POST "{{dotnet}}/auth/register" \
@@ -185,6 +154,53 @@ LOGOUT_RESPONSE=$(curl -s -X POST "{{dotnet}}/auth/logout" \
 
 echo "Logout Response:"
 echo $LOGOUT_RESPONSE | jq .
+
+## Using JWT Tokens for Protected Endpoints
+```bash
+# Extract access token from login response
+ACCESS_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.accessToken')
+
+# Example: Use JWT token to access a protected endpoint (when implemented)
+curl -X GET "{{dotnet}}/api/protected-resource" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "X-Correlation-Id: protected-$(date +%s)"
+
+# When token expires, use refresh token to get a new one
+REFRESH_RESPONSE=$(curl -s -X POST "{{dotnet}}/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: auto-refresh-$(date +%s)" \
+  -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}")
+
+# Extract new access token
+NEW_ACCESS_TOKEN=$(echo $REFRESH_RESPONSE | jq -r '.data.accessToken')
+```
+
+## Expected Response Formats
+
+### Login Response (JWT)
+```json
+{
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "abc123def456...",
+    "expiresAt": "2024-01-01T12:15:00Z",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "testuser@example.com",
+      "emailVerified": true,
+      "username": "testuser",
+      "firstName": "Test",
+      "lastName": "User",
+      "avatarUrl": null,
+      "createdAt": "2024-01-01T12:00:00Z",
+      "roles": ["user"]
+    }
+  },
+  "success": true,
+  "message": null,
+  "errors": null
+}
+```
 
 ## Testing Error Cases:
 

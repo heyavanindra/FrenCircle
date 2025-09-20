@@ -2,7 +2,13 @@ using Serilog;
 using Serilog.Exceptions;
 using FrenCircle.Api.Middleware; // for CorrelationIdMiddleware
 using FrenCircle.Api.Data;
+using FrenCircle.Api.Configuration;
+using FrenCircle.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +64,60 @@ builder.Services.AddDbContext<FrenCircleDbContext>(options =>
     options.LogTo(Console.WriteLine, LogLevel.Warning);
 });
 
+// --- JWT Configuration ---
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JWT"));
+var jwtSettings = builder.Configuration.GetSection("JWT").Get<JwtSettings>();
+
+if (jwtSettings == null || string.IsNullOrEmpty(jwtSettings.SecretKey))
+{
+    throw new InvalidOperationException("JWT configuration is missing or invalid");
+}
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // Allow HTTP in development
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidateAudience = true,
+        ValidAudience = jwtSettings.Audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero, // No tolerance for token expiry
+        NameClaimType = ClaimTypes.Name,
+        RoleClaimType = ClaimTypes.Role
+    };
+    
+    // JWT events for logging
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Log.Warning("JWT Authentication failed: {Error}", context.Exception.Message);
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Log.Information("JWT token validated for user {UserId}", userId);
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// Register JWT service
+builder.Services.AddScoped<IJwtService, JwtService>();
+
 // Add custom app services (example)
 // builder.Services.AddSingleton<ILoggingService, LoggingService>();
 
@@ -81,12 +141,12 @@ app.UseSerilogRequestLogging(opts =>
         diag.Set("CorrelationId", http.Request.Headers["X-Correlation-Id"].ToString());
     };
 });
-app.UseMiddleware<CorrelationIdMiddleware>();
 // Correlation ID middleware (ensures every request has one)
 app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
