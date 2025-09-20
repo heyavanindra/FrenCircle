@@ -31,3 +31,5 @@ Expected JSON: {"status": "ok", "TEST": "<value from .env.development>"}
 Notes:
 - Docker Compose reads environment variables from `.env.development` (configured in the repo root). Ensure it contains a TEST key, for example: `TEST="local_dev"`.
 - The Dockerfile starts the app with gunicorn+uvicorn workers and includes a healthcheck.
+
+TRIGGER DEPLOYMENT
