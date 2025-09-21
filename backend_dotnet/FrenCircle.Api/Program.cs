@@ -115,6 +115,18 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// --- CORS Configuration ---
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 // Register services
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddHttpClient();
@@ -144,6 +156,9 @@ app.UseSerilogRequestLogging(opts =>
 });
 // Correlation ID middleware (ensures every request has one)
 app.UseMiddleware<CorrelationIdMiddleware>();
+
+// Enable CORS
+app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 

@@ -115,8 +115,9 @@ public sealed class AuthController : BaseApiController
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,                    // Not accessible via JavaScript
-                Secure = !HttpContext.Request.IsHttps ? false : true, // HTTPS in production
-                SameSite = SameSiteMode.Strict,     // CSRF protection
+                //Secure = !HttpContext.Request.IsHttps ? false : true, // HTTPS in production
+                Secure = true,
+                SameSite = SameSiteMode.None,     // CSRF protection
                 Path = "/auth",                     // Only sent to auth endpoints
                 MaxAge = request.RememberMe 
                     ? TimeSpan.FromDays(60) 

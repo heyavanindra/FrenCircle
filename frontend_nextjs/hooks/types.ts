@@ -43,3 +43,68 @@ export interface UsePostReturn<T = any> {
   data: T | null;
   reset: () => void;
 }
+
+// Authentication API Types
+export interface LoginRequest {
+  emailOrUsername: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  data: {
+    accessToken: string;
+    refreshToken: string | null;
+    expiresAt: string;
+    user: {
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      username: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl: string | null;
+      createdAt: string;
+      roles: string[];
+    };
+  };
+  meta: any | null;
+}
+
+export interface LoginErrorResponse {
+  type: string;
+  title: string;
+  status: number;
+  instance: string;
+  CorrelationId: string;
+}
+
+export interface SignupRequest {
+  email: string;
+  password: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface SignupResponse {
+  data: {
+    id: string;
+    email: string;
+    emailVerified: boolean;
+    username: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+    createdAt: string;
+    roles: string[];
+  };
+  meta: any | null;
+}
+
+export interface SignupErrorResponse {
+  type: string;
+  title: string;
+  status: number;
+  instance: string;
+  CorrelationId: string;
+}

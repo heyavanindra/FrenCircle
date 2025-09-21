@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, LogOut, User, Sun, Moon } from "lucide-react";
+import { Menu, LogOut, User, Sun, Moon, Settings, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,6 +11,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useUser, userHelpers } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
@@ -24,7 +32,7 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
 
   const handleLoginClick = () => {
-    toast.info("This feature is coming soon!");
+    // Navigation is now handled by Link components
   };
 
   return (
@@ -70,26 +78,53 @@ export default function Navbar() {
             </Button>
             
             {isAuthenticated ? (
-              <>
-                <Avatar>
-                  <AvatarImage src={user?.avatarUrl || "/placeholder-avatar.jpg"} alt="User Avatar" />
-                  <AvatarFallback>{userHelpers.getInitials(user)}</AvatarFallback>
-                </Avatar>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={logout}
-                  className="text-xs"
-                >
-                  <LogOut className="h-3 w-3 mr-1" />
-                  Logout
-                </Button>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.avatarUrl || "/placeholder-avatar.jpg"} alt="User Avatar" />
+                      <AvatarFallback>{userHelpers.getInitials(user)}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {userHelpers.getFullName(user)}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/profile" className="cursor-pointer">
+                      <UserCircle className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/settings" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <Button variant="default" size="sm" onClick={handleLoginClick}>
-                <User className="h-3 w-3 mr-1" />
-                Login
-              </Button>
+              <Link href="/account/login">
+                <Button variant="default" size="sm">
+                  <User className="h-3 w-3 mr-1" />
+                  Login
+                </Button>
+              </Link>
             )}
           </div>
 
@@ -124,10 +159,12 @@ export default function Navbar() {
                     </div>
                   ) : (
                     <div className="border-b pb-3">
-                      <Button variant="default" size="sm" className="w-full" onClick={handleLoginClick}>
-                        <User className="h-3 w-3 mr-1" />
-                        Login
-                      </Button>
+                      <Link href="/account/login" className="block">
+                        <Button variant="default" size="sm" className="w-full">
+                          <User className="h-3 w-3 mr-1" />
+                          Login
+                        </Button>
+                      </Link>
                     </div>
                   )}
                   
@@ -141,6 +178,28 @@ export default function Navbar() {
                       {link.name}
                     </Link>
                   ))}
+                  
+                  {/* User menu items in mobile (only show if authenticated) */}
+                  {isAuthenticated && (
+                    <>
+                      <div className="border-t pt-3 mt-3">
+                        <Link
+                          href="/account/profile"
+                          className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                        >
+                          <UserCircle className="h-4 w-4 mr-2" />
+                          Profile
+                        </Link>
+                        <Link
+                          href="/account/settings"
+                          className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Settings
+                        </Link>
+                      </div>
+                    </>
+                  )}
                   
                   {/* Theme Toggle in Mobile Menu */}
                   <Button
@@ -168,7 +227,7 @@ export default function Navbar() {
                       variant="outline"
                       size="sm"
                       onClick={logout}
-                      className="w-full justify-start mt-3"
+                      className="w-full justify-start mt-3 text-red-600 hover:text-red-700"
                     >
                       <LogOut className="h-3 w-3 mr-2" />
                       Logout
