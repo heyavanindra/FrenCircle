@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, LogOut, User } from "lucide-react";
+import { Menu, LogOut, User, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -12,13 +12,16 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useUser, userHelpers } from "@/contexts/UserContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { navigationLinks } from "@/data/ui/navigationLinks";
+import Link from "next/link";
 
 
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useUser();
+  const { theme, toggleTheme } = useTheme();
 
   const handleLoginClick = () => {
     toast.info("This feature is coming soon!");
@@ -30,26 +33,42 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo/Brand */}
           <div className="flex-shrink-0">
-            <h1 className="text-xl font-bold text-foreground">FrenCircle</h1>
+            <Link href="/" className="text-xl font-bold text-foreground hover:opacity-80 transition-opacity">
+              FrenCircle
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
               {navigationLinks.map((link) => (
-                <a
+                <Link
                   key={link.name}
                   href={link.href}
                   className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
                 >
                   {link.name}
-                </a>
+                </Link>
               ))}
             </div>
           </div>
 
           {/* Desktop Avatar & Auth Section */}
           <div className="hidden md:flex items-center space-x-3">
+            {/* Theme Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? (
+                <Moon className="h-4 w-4" />
+              ) : (
+                <Sun className="h-4 w-4" />
+              )}
+            </Button>
+            
             {isAuthenticated ? (
               <>
                 <Avatar>
@@ -114,14 +133,34 @@ export default function Navbar() {
                   
                   {/* Navigation links in mobile menu */}
                   {navigationLinks.map((link) => (
-                    <a
+                    <Link
                       key={link.name}
                       href={link.href}
                       className="block rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
                     >
                       {link.name}
-                    </a>
+                    </Link>
                   ))}
+                  
+                  {/* Theme Toggle in Mobile Menu */}
+                  <Button
+                    variant="ghost"
+                    onClick={toggleTheme}
+                    className="w-full justify-start"
+                    aria-label="Toggle theme"
+                  >
+                    {theme === "light" ? (
+                      <>
+                        <Moon className="h-4 w-4 mr-2" />
+                        Dark Mode
+                      </>
+                    ) : (
+                      <>
+                        <Sun className="h-4 w-4 mr-2" />
+                        Light Mode
+                      </>
+                    )}
+                  </Button>
                   
                   {/* Logout button in mobile menu */}
                   {isAuthenticated && (
