@@ -4,6 +4,7 @@ using FrenCircle.Api.Middleware; // for CorrelationIdMiddleware
 using FrenCircle.Api.Data;
 using FrenCircle.Api.Configuration;
 using FrenCircle.Api.Services;
+using FrenCircle.Api.Extensions; // added for custom CORS
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -34,98 +35,13 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi(); // built-in OpenAPI/Swagger
 
 // --- Entity Framework Core with PostgreSQL ---
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<FrenCircleDbContext>(options =>
-{
-    options.UseNpgsql(connectionString, npgsqlOptions =>
-    {
-        npgsqlOptions.MigrationsAssembly("FrenCircle.Api"); // Assembly where migrations will be stored
-        npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(5),
-            errorCodesToAdd: null);
-    });
-    
-    // Configure warnings
-    options.ConfigureWarnings(warnings =>
-    {
-        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning);
-        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning);
-    });
-    
-    // Enable detailed errors in development
-    if (builder.Environment.IsDevelopment())
-    {
-        options.EnableSensitiveDataLogging();
-        options.EnableDetailedErrors();
-    }
-    
-    // Add query logging (only for Information level and above to reduce noise)
-    options.LogTo(Console.WriteLine, LogLevel.Warning);
-});
+builder.Services.AddFrenCircleDbContext(builder.Configuration, builder.Environment);
 
 // --- JWT Configuration ---
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JWT"));
-var jwtSettings = builder.Configuration.GetSection("JWT").Get<JwtSettings>();
-
-if (jwtSettings == null || string.IsNullOrEmpty(jwtSettings.SecretKey))
-{
-    throw new InvalidOperationException("JWT configuration is missing or invalid");
-}
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // Allow HTTP in development
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
-        ValidateIssuer = true,
-        ValidIssuer = jwtSettings.Issuer,
-        ValidateAudience = true,
-        ValidAudience = jwtSettings.Audience,
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero, // No tolerance for token expiry
-        NameClaimType = ClaimTypes.Name,
-        RoleClaimType = ClaimTypes.Role
-    };
-    
-    // JWT events for logging
-    options.Events = new JwtBearerEvents
-    {
-        OnAuthenticationFailed = context =>
-        {
-            Log.Warning("JWT Authentication failed: {Error}", context.Exception.Message);
-            return Task.CompletedTask;
-        },
-        OnTokenValidated = context =>
-        {
-            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            Log.Information("JWT token validated for user {UserId}", userId);
-            return Task.CompletedTask;
-        }
-    };
-});
-
-builder.Services.AddAuthorization();
+builder.Services.AddJwtAuthentication(builder.Configuration, builder.Environment);
 
 // --- CORS Configuration ---
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials();
-    });
-});
+builder.Services.AddCustomCors();
 
 // Register services
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -158,7 +74,7 @@ app.UseSerilogRequestLogging(opts =>
 app.UseMiddleware<CorrelationIdMiddleware>();
 
 // Enable CORS
-app.UseCors("AllowFrontend");
+app.UseCustomCors();
 
 app.UseHttpsRedirection();
 
