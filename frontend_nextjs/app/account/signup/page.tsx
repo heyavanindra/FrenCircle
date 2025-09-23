@@ -13,8 +13,7 @@ import {
   Mail, 
   Lock, 
   User,
-  Github, 
-  Chrome,
+  Github,
   ArrowLeft,
   UserPlus,
   Check 
@@ -23,6 +22,7 @@ import { toast } from "sonner";
 import { usePost } from "@/hooks/useApi";
 import { SignupRequest, SignupResponse, SignupErrorResponse } from "@/hooks/types";
 import { useRouter } from "next/navigation";
+import GoogleOAuthButton from "@/components/GoogleOAuthButton";
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -194,14 +194,7 @@ export default function SignupPage() {
             <CardContent className="space-y-6">
               {/* Social Signup Buttons */}
               <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => handleSocialSignup("Google")}
-                >
-                  <Chrome className="h-4 w-4 mr-2" />
-                  Google
-                </Button>
+                <GoogleOAuthButton className="w-full" />
                 <Button
                   variant="outline"
                   className="w-full"

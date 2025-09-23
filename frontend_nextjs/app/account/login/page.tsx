@@ -12,8 +12,7 @@ import {
   EyeOff, 
   Mail, 
   Lock, 
-  Github, 
-  Chrome,
+  Github,
   ArrowLeft,
   LogIn 
 } from "lucide-react";
@@ -22,6 +21,7 @@ import { usePost, useApi } from "@/hooks/useApi";
 import { LoginRequest, LoginResponse, LoginErrorResponse } from "@/hooks/types";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
+import GoogleOAuthButton from "@/components/GoogleOAuthButton";
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -154,14 +154,7 @@ export default function LoginPage() {
             <CardContent className="space-y-6">
               {/* Social Login Buttons */}
               <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => handleSocialLogin("Google")}
-                >
-                  <Chrome className="h-4 w-4 mr-2" />
-                  Google
-                </Button>
+                <GoogleOAuthButton className="w-full" />
                 <Button
                   variant="outline"
                   className="w-full"

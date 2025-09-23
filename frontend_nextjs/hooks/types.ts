@@ -163,3 +163,39 @@ export interface ResendVerificationResponse {
   };
   meta: any | null;
 }
+
+// Google OAuth Types
+export interface GoogleOAuthResponse {
+  data: {
+    AuthUrl: string; // Backend returns AuthUrl with capital A
+  };
+  meta: any | null;
+}
+
+export interface GoogleInitResponse {
+  data: {
+    authUrl: string; // Backend returns nested data.authUrl
+  };
+}
+
+export interface GoogleCallbackRequest {
+  code: string;
+  state: string;
+}
+
+export interface GoogleCallbackResponse {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: string;
+  user: {
+    id: string;
+    email: string;
+    emailVerified: boolean;
+    username: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+    createdAt: string;
+    roles: string[];
+  };
+}
