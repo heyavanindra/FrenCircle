@@ -1,3 +1,4 @@
+using BCrypt.Net;
 using FrenCircle.Api.Configuration;
 using FrenCircle.Api.Data;
 using FrenCircle.Api.Services;
@@ -98,7 +99,7 @@ public sealed class AuthController : BaseApiController
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 SessionId = session.Id,
-                TokenHash = HashPassword(refreshTokenValue), // Store hash, not plain token
+                TokenHash = HashToken(refreshTokenValue), // Store hash, not plain token
                 FamilyId = Guid.NewGuid(),
                 ExpiresAt = request.RememberMe 
                     ? DateTimeOffset.UtcNow.AddDays(60) 
@@ -277,11 +278,12 @@ public sealed class AuthController : BaseApiController
             {
                 Id = Guid.NewGuid(),
                 Email = request.Email,
-                CodeHash = HashPassword(verificationToken),
+                CodeHash = verificationToken, // Store plain token for development
                 Purpose = "Signup",
                 ExpiresAt = DateTimeOffset.UtcNow.AddHours(24)
             };
 
+            _logger.LogInformation("Verification token generated for {Email}: {Token}", request.Email, verificationToken);
             _context.OtpCodes.Add(otpCode);
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -334,7 +336,7 @@ public sealed class AuthController : BaseApiController
                 return UnauthorizedProblem("Refresh token not found");
             }
 
-            var tokenHash = HashPassword(refreshTokenValue);
+            var tokenHash = HashToken(refreshTokenValue);
             
             // Find the refresh token by hash
             var refreshToken = await _context.RefreshTokens
@@ -371,7 +373,7 @@ public sealed class AuthController : BaseApiController
                 Id = Guid.NewGuid(),
                 UserId = refreshToken.UserId,
                 SessionId = refreshToken.SessionId,
-                TokenHash = HashPassword(newRefreshTokenValue),
+                TokenHash = HashToken(newRefreshTokenValue),
                 FamilyId = refreshToken.FamilyId,
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(14),
                 IssuedAt = DateTimeOffset.UtcNow
@@ -446,7 +448,7 @@ public sealed class AuthController : BaseApiController
                 !string.IsNullOrEmpty(refreshTokenValue))
             {
                 // Find and revoke refresh token
-                var tokenHash = HashPassword(refreshTokenValue);
+                var tokenHash = HashToken(refreshTokenValue);
                 var refreshToken = await _context.RefreshTokens
                     .FirstOrDefaultAsync(rt => rt.TokenHash == tokenHash, cancellationToken);
 
@@ -496,11 +498,10 @@ public sealed class AuthController : BaseApiController
 
         try
         {
-            // Find verification token
-            var tokenHash = HashPassword(request.Token);
+            // Find verification token (comparing plain tokens for development)
             var otpCode = await _context.OtpCodes
                 .FirstOrDefaultAsync(oc => oc.Email == request.Email && 
-                                         oc.CodeHash == tokenHash && 
+                                         oc.CodeHash == request.Token && 
                                          oc.Purpose == "Signup", 
                                    cancellationToken);
 
@@ -557,15 +558,28 @@ public sealed class AuthController : BaseApiController
     // Helper methods (in production, move to separate services)
     private static string HashPassword(string password)
     {
-        // Simple hash for demo - use BCrypt or similar in production
-        using var sha256 = SHA256.Create();
-        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hashedBytes);
+        // Use BCrypt for secure password hashing
+        return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
     }
 
     private static bool VerifyPassword(string password, string hash)
     {
-        return HashPassword(password) == hash;
+        try
+        {
+            return BCrypt.Net.BCrypt.Verify(password, hash);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // Separate method for hashing tokens/codes (still using SHA256 as they're temporary)
+    private static string HashToken(string token)
+    {
+        using var sha256 = SHA256.Create();
+        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token));
+        return Convert.ToBase64String(hashedBytes);
     }
 
     private static string GenerateRefreshToken()
@@ -582,6 +596,199 @@ public sealed class AuthController : BaseApiController
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes).Replace("+", "").Replace("/", "").Replace("=", "")[..8];
+    }
+
+    /// <summary>
+    /// Resend email verification code
+    /// </summary>
+    [HttpPost("resend-verification")]
+    [ProducesResponseType(typeof(ApiResponse<VerificationSentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Resend verification attempt for {Email} with CorrelationId {CorrelationId}", 
+            request.Email, CorrelationId);
+
+        try
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+
+            if (user == null)
+            {
+                return BadRequestProblem("User not found");
+            }
+
+            if (user.EmailVerified)
+            {
+                return BadRequestProblem("Email is already verified");
+            }
+
+            // Generate new verification token
+            var verificationToken = GenerateVerificationToken();
+            var otpCode = new OtpCode
+            {
+                Id = Guid.NewGuid(),
+                Email = user.Email,
+                CodeHash = verificationToken, // Store plain token for development
+                Purpose = "Signup",
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15)
+            };
+
+            _logger.LogInformation("Token =========== {VerificationToken} ", verificationToken);
+
+           _context.OtpCodes.Add(otpCode);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogError("New verification code generated for user {UserId}: {Code}", user.Id, verificationToken);
+
+            return Ok(new ApiResponse<VerificationSentResponse>(
+                new VerificationSentResponse(
+                    "Verification code sent to your email", 
+                    DateTimeOffset.UtcNow
+                )
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during resend verification for {Email}", request.Email);
+            return Problem("An error occurred while resending verification");
+        }
+    }
+
+    /// <summary>
+    /// Send password reset code to email
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(typeof(ApiResponse<VerificationSentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Forgot password attempt for {Email} with CorrelationId {CorrelationId}", 
+            request.Email, CorrelationId);
+
+        try
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+
+            if (user == null)
+            {
+                // Don't reveal if user exists - security best practice
+                return Ok(new ApiResponse<VerificationSentResponse>(
+                    new VerificationSentResponse(
+                        "If this email is registered, you will receive a password reset code", 
+                        DateTimeOffset.UtcNow
+                    )
+                ));
+            }
+
+            if (!user.EmailVerified)
+            {
+                return BadRequestProblem("Email must be verified before password reset");
+            }
+
+            // Generate password reset token
+            var resetToken = GenerateVerificationToken();
+            var otpCode = new OtpCode
+            {
+                Id = Guid.NewGuid(),
+                Email = user.Email,
+                CodeHash = resetToken, // Store plain token for development
+                Purpose = "PasswordReset",
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15)
+            };
+
+            _context.OtpCodes.Add(otpCode);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Password reset code generated for user {UserId}: {Code}", user.Id, resetToken);
+
+            return Ok(new ApiResponse<VerificationSentResponse>(
+                new VerificationSentResponse(
+                    "Password reset code sent to your email", 
+                    DateTimeOffset.UtcNow
+                )
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during forgot password for {Email}", request.Email);
+            return Problem("An error occurred while processing password reset request");
+        }
+    }
+
+    /// <summary>
+    /// Reset password using verification code
+    /// </summary>
+    [HttpPost("reset-password")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Reset password attempt for {Email} with CorrelationId {CorrelationId}", 
+            request.Email, CorrelationId);
+
+        try
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+
+            if (user == null)
+            {
+                return BadRequestProblem("Invalid reset request");
+            }
+
+            // Find valid password reset token (comparing plain tokens for development)
+            var otpCode = await _context.OtpCodes
+                .FirstOrDefaultAsync(oc => oc.Email == user.Email && 
+                                          oc.CodeHash == request.Token && 
+                                          oc.Purpose == "PasswordReset" &&
+                                          !oc.ConsumedAt.HasValue, 
+                                    cancellationToken);
+
+            if (otpCode == null)
+            {
+                return BadRequestProblem("Invalid or expired code");
+            }
+
+            if (otpCode.ExpiresAt <= DateTimeOffset.UtcNow)
+            {
+                return BadRequestProblem("Reset code has expired");
+            }
+
+            // Validate new password
+            var minPasswordLength = _configuration.GetValue<int>("Auth:MinPasswordLength", 8);
+            if (request.NewPassword.Length < minPasswordLength)
+            {
+                return BadRequestProblem($"Password must be at least {minPasswordLength} characters long");
+            }
+
+            // Update password
+            user.PasswordHash = HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTimeOffset.UtcNow;
+
+            // Mark reset code as consumed
+            otpCode.ConsumedAt = DateTimeOffset.UtcNow;
+
+            // Revoke all existing refresh tokens for security
+            var refreshTokens = await _context.RefreshTokens
+                .Where(rt => rt.UserId == user.Id && !rt.RevokedAt.HasValue)
+                .ToListAsync(cancellationToken);
+
+            foreach (var refreshToken in refreshTokens)
+            {
+                refreshToken.RevokedAt = DateTimeOffset.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Password reset successful for user {UserId}", user.Id);
+
+            return Ok(new ApiResponse<object>(new { message = "Password reset successful" }));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during password reset for {Email}", request.Email);
+            return Problem("An error occurred while resetting password");
+        }
     }
 
     /// <summary>
@@ -828,7 +1035,7 @@ public sealed class AuthController : BaseApiController
             Id = Guid.NewGuid(),
             UserId = user.Id,
             SessionId = session.Id,
-            TokenHash = HashPassword(refreshTokenValue),
+            TokenHash = HashToken(refreshTokenValue),
             FamilyId = Guid.NewGuid(),
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
             IssuedAt = DateTimeOffset.UtcNow

@@ -259,6 +259,33 @@ curl -X POST "{{dotnet}}/auth/refresh" \
     "refreshToken": "invalid_token_here"
   }'
 
+## 7. Resend Email Verification
+curl -X POST "{{dotnet}}/auth/resend-verification" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: resend-$(date +%s)" \
+  -d '{
+    "email": "john.doe@example.com"
+  }'
+
+## 8. Forgot Password (Send Reset Code)
+curl -X POST "{{dotnet}}/auth/forgot-password" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: forgot-$(date +%s)" \
+  -d '{
+    "email": "john.doe@example.com"
+  }'
+
+## 9. Reset Password
+# Note: Replace TOKEN_FROM_EMAIL with actual reset token from email
+curl -X POST "{{dotnet}}/auth/reset-password" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: reset-$(date +%s)" \
+  -d '{
+    "email": "john.doe@example.com",
+    "token": "TOKEN_FROM_EMAIL",
+    "newPassword": "NewSecurePass123!"
+  }'
+
 ## PowerShell Variables (for Windows):
 # $dotnet = "http://localhost:5000"
 # $dotnet = "https://localhost:5001"

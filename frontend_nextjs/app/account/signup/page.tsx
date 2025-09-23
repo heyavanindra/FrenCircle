@@ -130,11 +130,11 @@ export default function SignupPage() {
       if (response.status === 200 || response.status === 201) {
         const { data } = response.data;
         
-        toast.success(`Account created successfully! Welcome ${data.firstName}!`);
+        toast.success(`Account created successfully! Please check your email to verify your account.`);
         console.log("Signup response:", response.data);
         
-        // Redirect to login page
-        router.push('/account/login');
+        // Redirect to email verification page with email parameter
+        router.push(`/account/verify-email?email=${encodeURIComponent(formData.email)}`);
       }
       
     } catch (error: any) {

@@ -108,3 +108,58 @@ export interface SignupErrorResponse {
   instance: string;
   CorrelationId: string;
 }
+
+// Email Verification Types
+export interface VerifyEmailRequest {
+  email: string;
+  token: string;
+}
+
+export interface VerifyEmailResponse {
+  data: {
+    message: string;
+    emailVerified: boolean;
+  };
+  meta: any | null;
+}
+
+// Forgot Password Types
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  data: {
+    message: string;
+    verificationSent: boolean;
+  };
+  meta: any | null;
+}
+
+// Reset Password Types
+export interface ResetPasswordRequest {
+  email: string;
+  token: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  data: {
+    message: string;
+    passwordReset: boolean;
+  };
+  meta: any | null;
+}
+
+// Resend Verification Types
+export interface ResendVerificationRequest {
+  email: string;
+}
+
+export interface ResendVerificationResponse {
+  data: {
+    message: string;
+    verificationSent: boolean;
+  };
+  meta: any | null;
+}
