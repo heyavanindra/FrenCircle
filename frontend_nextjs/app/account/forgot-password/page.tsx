@@ -147,7 +147,7 @@ export default function ForgotPasswordPage() {
                       <Mail className="h-5 w-5 mt-0.5 text-primary" />
                       <div>
                         <p className="font-medium text-foreground mb-1">How it works</p>
-                        <p>Enter your email address and we'll send you a verification code to reset your password.</p>
+                        <p>Enter your email address and we&apos;ll send you a verification code to reset your password.</p>
                       </div>
                     </div>
                   </div>
