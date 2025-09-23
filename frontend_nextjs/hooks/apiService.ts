@@ -2,7 +2,7 @@ import { ApiConfig, ApiResponse, ApiError, RequestConfig } from './types';
 
 // Default configuration
 const DEFAULT_CONFIG: ApiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com',
   timeout: 50000,
   headers: {
     'Content-Type': 'application/json',
