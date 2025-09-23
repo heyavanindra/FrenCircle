@@ -22,19 +22,22 @@ public sealed class AuthController : BaseApiController
     private readonly IConfiguration _configuration;
     private readonly IJwtService _jwtService;
     private readonly HttpClient _httpClient;
+    private readonly FrenCircle.Infra.IEmailService _emailService;
 
     public AuthController(
         ILogger<AuthController> logger, 
         FrenCircleDbContext context,
         IConfiguration configuration,
         IJwtService jwtService,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        FrenCircle.Infra.IEmailService emailService)
     {
         _logger = logger;
         _context = context;
         _configuration = configuration;
         _jwtService = jwtService;
         _httpClient = httpClient;
+        _emailService = emailService;
     }
 
     /// <summary>
@@ -288,6 +291,18 @@ public sealed class AuthController : BaseApiController
 
             await _context.SaveChangesAsync(cancellationToken);
 
+            // Send verification email
+            try
+            {
+                await _emailService.SendVerificationEmailAsync(request.Email, request.FirstName ?? "User", verificationToken);
+                _logger.LogInformation("Verification email sent to {Email}", request.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send verification email to {Email}", request.Email);
+                // Continue without failing the registration - user can resend verification
+            }
+
             var userInfo = new UserInfo(
                 Id: user.Id,
                 Email: user.Email,
@@ -501,7 +516,7 @@ public sealed class AuthController : BaseApiController
             // Find verification token (comparing plain tokens for development)
             var otpCode = await _context.OtpCodes
                 .FirstOrDefaultAsync(oc => oc.Email == request.Email && 
-                                         oc.CodeHash == request.Token && 
+                                         oc.CodeHash == request.Token.ToUpper() && 
                                          oc.Purpose == "Signup", 
                                    cancellationToken);
 
@@ -536,6 +551,18 @@ public sealed class AuthController : BaseApiController
             otpCode.ConsumedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Send welcome email
+            try
+            {
+                await _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName ?? "User");
+                _logger.LogInformation("Welcome email sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send welcome email to {Email}", user.Email);
+                // Continue without failing - email verification was successful
+            }
 
             var response = new VerificationSentResponse(
                 Message: "Email verified successfully",
@@ -595,7 +622,7 @@ public sealed class AuthController : BaseApiController
         var randomBytes = new byte[32];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
-        return Convert.ToBase64String(randomBytes).Replace("+", "").Replace("/", "").Replace("=", "")[..8];
+        return Convert.ToBase64String(randomBytes).Replace("+", "").Replace("/", "").Replace("=", "")[..8].ToUpper();
     }
 
     /// <summary>
@@ -634,12 +661,22 @@ public sealed class AuthController : BaseApiController
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15)
             };
 
-            _logger.LogInformation("Token =========== {VerificationToken} ", verificationToken);
-
-           _context.OtpCodes.Add(otpCode);
+            _context.OtpCodes.Add(otpCode);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogError("New verification code generated for user {UserId}: {Code}", user.Id, verificationToken);
+            _logger.LogInformation("New verification code generated for user {UserId}: {Code}", user.Id, verificationToken);
+
+            // Send verification email
+            try
+            {
+                await _emailService.SendVerificationEmailAsync(user.Email, user.FirstName ?? "User", verificationToken);
+                _logger.LogInformation("Verification email resent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resend verification email to {Email}", user.Email);
+                // Continue without failing - user can try again
+            }
 
             return Ok(new ApiResponse<VerificationSentResponse>(
                 new VerificationSentResponse(
@@ -681,9 +718,10 @@ public sealed class AuthController : BaseApiController
                 ));
             }
 
+            // Allow password reset for unverified users in case verification email failed
             if (!user.EmailVerified)
             {
-                return BadRequestProblem("Email must be verified before password reset");
+                _logger.LogInformation("Password reset requested for unverified email {Email} - allowing in case verification email failed", request.Email);
             }
 
             // Generate password reset token
@@ -701,6 +739,18 @@ public sealed class AuthController : BaseApiController
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Password reset code generated for user {UserId}: {Code}", user.Id, resetToken);
+
+            // Send password reset email
+            try
+            {
+                await _emailService.SendPasswordResetEmailAsync(user.Email, user.FirstName ?? "User", resetToken);
+                _logger.LogInformation("Password reset email sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password reset email to {Email}", user.Email);
+                // Continue without failing - user can try again
+            }
 
             return Ok(new ApiResponse<VerificationSentResponse>(
                 new VerificationSentResponse(
@@ -739,7 +789,7 @@ public sealed class AuthController : BaseApiController
             // Find valid password reset token (comparing plain tokens for development)
             var otpCode = await _context.OtpCodes
                 .FirstOrDefaultAsync(oc => oc.Email == user.Email && 
-                                          oc.CodeHash == request.Token && 
+                                          oc.CodeHash == request.Token.ToUpper() && 
                                           oc.Purpose == "PasswordReset" &&
                                           !oc.ConsumedAt.HasValue, 
                                     cancellationToken);
@@ -765,6 +815,14 @@ public sealed class AuthController : BaseApiController
             user.PasswordHash = HashPassword(request.NewPassword);
             user.UpdatedAt = DateTimeOffset.UtcNow;
 
+            // If user's email wasn't verified, verify it now since they proved email access
+            var wasEmailUnverified = !user.EmailVerified;
+            if (!user.EmailVerified)
+            {
+                user.EmailVerified = true;
+                _logger.LogInformation("Email automatically verified for user {UserId} during password reset", user.Id);
+            }
+
             // Mark reset code as consumed
             otpCode.ConsumedAt = DateTimeOffset.UtcNow;
 
@@ -781,6 +839,21 @@ public sealed class AuthController : BaseApiController
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Password reset successful for user {UserId}", user.Id);
+
+            // Send welcome email if this was the first time email was verified
+            if (wasEmailUnverified)
+            {
+                try
+                {
+                    await _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName ?? "User");
+                    _logger.LogInformation("Welcome email sent to newly verified user {Email}", user.Email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send welcome email to {Email}", user.Email);
+                    // Don't fail the password reset for email sending issues
+                }
+            }
 
             return Ok(new ApiResponse<object>(new { message = "Password reset successful" }));
         }

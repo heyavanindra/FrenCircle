@@ -3,7 +3,7 @@ import { ApiConfig, ApiResponse, ApiError, RequestConfig } from './types';
 // Default configuration
 const DEFAULT_CONFIG: ApiConfig = {
   baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
-  timeout: 10000,
+  timeout: 50000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -43,7 +43,7 @@ class ApiService {
   // Create AbortController for timeout
   private createAbortController(timeout?: number): AbortController {
     const controller = new AbortController();
-    const timeoutMs = timeout || this.config.timeout || 10000;
+    const timeoutMs = timeout || this.config.timeout || 50000;
     
     setTimeout(() => controller.abort(), timeoutMs);
     return controller;

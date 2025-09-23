@@ -47,6 +47,11 @@ builder.Services.AddCustomCors();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddHttpClient();
 
+// Email Service Configuration
+builder.Services.Configure<FrenCircle.Infra.Configuration.SmtpSettings>(
+    builder.Configuration.GetSection("Email:Smtp"));
+builder.Services.AddScoped<FrenCircle.Infra.IEmailService, FrenCircle.Infra.EmailService>();
+
 // Add custom app services (example)
 // builder.Services.AddSingleton<ILoggingService, LoggingService>();
 

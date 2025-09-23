@@ -268,6 +268,7 @@ curl -X POST "{{dotnet}}/auth/resend-verification" \
   }'
 
 ## 8. Forgot Password (Send Reset Code)
+# Note: Works for both verified and unverified emails (in case verification email failed)
 curl -X POST "{{dotnet}}/auth/forgot-password" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: forgot-$(date +%s)" \
@@ -277,6 +278,7 @@ curl -X POST "{{dotnet}}/auth/forgot-password" \
 
 ## 9. Reset Password
 # Note: Replace TOKEN_FROM_EMAIL with actual reset token from email
+# This will automatically verify the email if it wasn't verified before
 curl -X POST "{{dotnet}}/auth/reset-password" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: reset-$(date +%s)" \
