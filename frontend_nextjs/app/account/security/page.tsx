@@ -6,6 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter, 
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import { 
   ArrowLeft, 
@@ -61,6 +69,11 @@ export default function SecurityPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showSessionLogoutDialog, setShowSessionLogoutDialog] = useState(false);
+  const [showLogoutAllDialog, setShowLogoutAllDialog] = useState(false);
+  const [sessionToLogout, setSessionToLogout] = useState<SessionData | null>(null);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -115,14 +128,17 @@ export default function SecurityPage() {
       const response = await changePassword(changePasswordRequest);
       
       if (response.status === 200) {
-        toast.success("Password changed successfully! Please log in again on other devices.");
+        toast.success("Password changed successfully!");
         setPasswordData({
           currentPassword: "",
           newPassword: "",
           confirmPassword: ""
         });
-        // Refetch sessions as they might have changed
+        setPasswordChangeSuccess(true);
+        // Refetch sessions to get updated data
         refetchSessions();
+        // Show dialog to ask about logging out other devices
+        setShowLogoutDialog(true);
       }
     } catch (error: any) {
       console.error("Password change failed:", error);
@@ -137,10 +153,42 @@ export default function SecurityPage() {
     }
   };
 
-  const handleLogoutSession = async (sessionId: string) => {
+  const handleLogoutOtherDevicesChoice = async (shouldLogout: boolean) => {
+    setShowLogoutDialog(false);
+    
+    if (shouldLogout) {
+      try {
+        const response = await logoutAllSessions();
+        
+        if (response.status === 200) {
+          toast.success("Logged out from all other devices successfully!");
+          refetchSessions();
+        }
+      } catch (error: any) {
+        console.error("Logout all sessions failed:", error);
+        toast.error("Failed to logout other devices. You can do this manually from the sessions list below.");
+      }
+    } else {
+      toast.info("Password changed successfully. Your other devices will remain logged in.");
+    }
+  };
+
+  const handleLogoutSessionClick = (session: SessionData) => {
+    setSessionToLogout(session);
+    setShowSessionLogoutDialog(true);
+  };
+
+  const handleLogoutSessionConfirm = async (confirmed: boolean) => {
+    setShowSessionLogoutDialog(false);
+    
+    if (!confirmed || !sessionToLogout) {
+      setSessionToLogout(null);
+      return;
+    }
+
     try {
       // Use direct API call since we need dynamic endpoint
-      const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile/sessions/${sessionId}/logout`, {
+      const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile/sessions/${sessionToLogout.id}/logout`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('userToken')}`,
@@ -159,10 +207,22 @@ export default function SecurityPage() {
     } catch (error: any) {
       console.error("Logout session failed:", error);
       toast.error(error.message || "Failed to logout session. Please try again.");
+    } finally {
+      setSessionToLogout(null);
     }
   };
 
-  const handleLogoutAllOtherSessions = async () => {
+  const handleLogoutAllOtherSessionsClick = () => {
+    setShowLogoutAllDialog(true);
+  };
+
+  const handleLogoutAllOtherSessionsConfirm = async (confirmed: boolean) => {
+    setShowLogoutAllDialog(false);
+    
+    if (!confirmed) {
+      return;
+    }
+
     try {
       const response = await logoutAllSessions();
       
@@ -432,7 +492,7 @@ export default function SecurityPage() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={handleLogoutAllOtherSessions}
+                        onClick={handleLogoutAllOtherSessionsClick}
                         disabled={isLoggingOutAll}
                       >
                         {isLoggingOutAll ? (
@@ -495,7 +555,7 @@ export default function SecurityPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleLogoutSession(session.id)}
+                              onClick={() => handleLogoutSessionClick(session)}
                               disabled={isLoggingOutSession}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
@@ -548,6 +608,216 @@ export default function SecurityPage() {
             </Card>
           </motion.div>
         </motion.div>
+
+        {/* Logout Other Devices Dialog */}
+        <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Shield className="h-5 w-5 mr-2 text-green-600" />
+                Password Changed Successfully
+              </DialogTitle>
+              <DialogDescription className="space-y-3">
+                <p>Your password has been updated successfully!</p>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                  <div className="flex items-start space-x-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-yellow-800 dark:text-yellow-200">Security Recommendation</p>
+                      <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                        For security, we recommend logging out from all other devices. This ensures your new password is required everywhere.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm">
+                  Would you like to logout from all other devices now? You can also do this manually later using the session management below.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleLogoutOtherDevicesChoice(false)}
+                className="w-full sm:w-auto"
+              >
+                Keep Other Sessions
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => handleLogoutOtherDevicesChoice(true)}
+                disabled={isLoggingOutAll}
+                className="w-full sm:w-auto"
+              >
+                {isLoggingOutAll ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Logging Out...
+                  </div>
+                ) : (
+                  <>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout Other Devices
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Session Logout Confirmation Dialog */}
+        <Dialog open={showSessionLogoutDialog} onOpenChange={setShowSessionLogoutDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <LogOut className="h-5 w-5 mr-2 text-red-600" />
+                Logout Session
+              </DialogTitle>
+              <DialogDescription className="space-y-3">
+                <p>Are you sure you want to logout this session?</p>
+                {sessionToLogout && (
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="text-muted-foreground">
+                        {getDeviceIcon(sessionToLogout.userAgent)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {sessionToLogout.userAgent.split(' ')[0]} Browser
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          IP: {sessionToLogout.ipAddress}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <p>Authentication: {sessionToLogout.authMethod}</p>
+                      <p>Last seen: {formatLastSeen(sessionToLogout.lastSeenAt)}</p>
+                      <p>Created: {new Date(sessionToLogout.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <div className="flex items-start space-x-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-red-800 dark:text-red-200">Security Note</p>
+                      <p className="text-red-700 dark:text-red-300 mt-1">
+                        This action will immediately logout this device. If this is a device you don't recognize, logging it out is recommended for security.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleLogoutSessionConfirm(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleLogoutSessionConfirm(true)}
+                disabled={isLoggingOutSession}
+                className="w-full sm:w-auto"
+              >
+                {isLoggingOutSession ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Logging Out...
+                  </div>
+                ) : (
+                  <>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout Session
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Logout All Other Sessions Confirmation Dialog */}
+        <Dialog open={showLogoutAllDialog} onOpenChange={setShowLogoutAllDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <LogOut className="h-5 w-5 mr-2 text-red-600" />
+                Logout All Other Sessions
+              </DialogTitle>
+              <DialogDescription className="space-y-3">
+                <p>Are you sure you want to logout from all other devices?</p>
+                
+                {sessionsData?.data.sessions && (
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-sm font-medium mb-2">
+                      This will logout {sessionsData.data.sessions.filter(s => !s.isCurrentSession).length} other session(s):
+                    </p>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {sessionsData.data.sessions
+                        .filter(session => !session.isCurrentSession)
+                        .map((session) => (
+                          <div key={session.id} className="flex items-center space-x-2 text-xs">
+                            <div className="text-muted-foreground">
+                              {getDeviceIcon(session.userAgent)}
+                            </div>
+                            <span className="flex-1">
+                              {session.userAgent.split(' ')[0]} • {session.ipAddress}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {formatLastSeen(session.lastSeenAt)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <div className="flex items-start space-x-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-red-800 dark:text-red-200">Security Action</p>
+                      <p className="text-red-700 dark:text-red-300 mt-1">
+                        All other devices will be immediately logged out and will need to sign in again. Your current session will remain active.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleLogoutAllOtherSessionsConfirm(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleLogoutAllOtherSessionsConfirm(true)}
+                disabled={isLoggingOutAll}
+                className="w-full sm:w-auto"
+              >
+                {isLoggingOutAll ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Logging Out...
+                  </div>
+                ) : (
+                  <>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout All Others
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
