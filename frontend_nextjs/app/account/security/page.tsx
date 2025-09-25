@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { useGet, usePost } from "@/hooks/useApi";
+import { apiService } from "@/hooks/apiService";
 import { 
   ChangePasswordRequest, 
   ChangePasswordResponse,
@@ -187,26 +188,23 @@ export default function SecurityPage() {
     }
 
     try {
-      // Use direct API call since we need dynamic endpoint
-      const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/profile/sessions/${sessionToLogout.id}/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('userToken')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (apiResponse.ok) {
-        const result = await apiResponse.json();
-        toast.success(result.data?.message || "Session logged out successfully");
+      // Use apiService.post with dynamic endpoint
+      const response = await apiService.post<LogoutSessionResponse>(`/profile/sessions/${sessionToLogout.id}/logout`, {});
+      
+      if (response.status === 200) {
+        toast.success(response.data.data?.message || "Session logged out successfully");
         refetchSessions();
-      } else {
-        const errorData = await apiResponse.json();
-        throw new Error(errorData.title || "Failed to logout session");
       }
     } catch (error: any) {
       console.error("Logout session failed:", error);
-      toast.error(error.message || "Failed to logout session. Please try again.");
+      
+      if (error?.status && error?.data?.title) {
+        toast.error(error.data.title);
+      } else if (error?.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to logout session. Please try again.");
+      }
     } finally {
       setSessionToLogout(null);
     }
