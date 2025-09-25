@@ -53,7 +53,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   data: {
     accessToken: string;
-    refreshToken: string | null;
+    refreshToken: string;
     expiresAt: string;
     user: {
       id: string;
@@ -185,7 +185,7 @@ export interface GoogleCallbackRequest {
 
 export interface GoogleCallbackResponse {
   accessToken: string;
-  refreshToken: string | null;
+  refreshToken: string;
   expiresAt: string;
   user: {
     id: string;
@@ -285,6 +285,20 @@ export interface LogoutAllSessionsResponse {
   data: {
     message: string;
     deletedAt: string;
+  };
+  meta: any | null;
+}
+
+// Refresh Token Types
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: string;
   };
   meta: any | null;
 }

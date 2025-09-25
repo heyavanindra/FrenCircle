@@ -2,7 +2,7 @@ namespace FrenCircle.Contracts.Responses;
 
 public sealed record AuthResponse(
     string AccessToken,
-    string? RefreshToken,  // Nullable - refresh tokens now stored in httpOnly cookies
+    string? RefreshToken,  // Returned for frontend compatibility (also stored in httpOnly cookies)
     DateTimeOffset ExpiresAt,
     UserInfo User
 );
@@ -21,7 +21,7 @@ public sealed record UserInfo(
 
 public sealed record RefreshTokenResponse(
     string AccessToken,
-    string? RefreshToken,  // Nullable - refresh tokens now stored in httpOnly cookies
+    string? RefreshToken,  // Returned for frontend compatibility (also stored in httpOnly cookies)
     DateTimeOffset ExpiresAt
 );
 

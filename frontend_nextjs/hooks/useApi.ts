@@ -158,7 +158,13 @@ export function useApi() {
     get,
     post,
     setToken: apiService.setToken.bind(apiService),
+    setRefreshToken: apiService.setRefreshToken.bind(apiService),
+    setTokens: apiService.setTokens.bind(apiService),
     clearToken: apiService.clearToken.bind(apiService),
+    clearRefreshToken: apiService.clearRefreshToken.bind(apiService),
+    clearAllTokens: apiService.clearAllTokens.bind(apiService),
     hasToken: apiService.hasToken.bind(apiService),
+    hasRefreshToken: apiService.hasRefreshToken.bind(apiService),
+    getTokensDebug: apiService.getTokensDebug.bind(apiService),
   };
 }

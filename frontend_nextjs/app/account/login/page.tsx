@@ -50,7 +50,7 @@ export default function LoginPage() {
   // Hooks
   const { mutate: login, loading: isLoading, error: loginError } = usePost<LoginResponse>("/auth/login");
   const { setUser } = useUser();
-  const { setToken } = useApi();
+  const { setTokens } = useApi();
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,8 +75,8 @@ export default function LoginPage() {
       if (response.status === 200 && response.data) {
         const { data } = response.data;
         
-        // Set access token in localStorage
-        setToken(data.accessToken);
+        // Set both access and refresh tokens in localStorage
+        setTokens(data.accessToken, data.refreshToken);
         
         // Update user context with user data
         setUser({

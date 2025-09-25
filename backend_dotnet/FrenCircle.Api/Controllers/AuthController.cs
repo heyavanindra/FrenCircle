@@ -116,17 +116,9 @@ public sealed class AuthController : BaseApiController
             await _context.SaveChangesAsync(cancellationToken);
 
             // Set refresh token as httpOnly cookie (secure storage)
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,                    // Not accessible via JavaScript
-                //Secure = !HttpContext.Request.IsHttps ? false : true, // HTTPS in production
-                Secure = true,
-                SameSite = SameSiteMode.None,     // CSRF protection
-                Path = "/auth",                     // Only sent to auth endpoints
-                MaxAge = request.RememberMe 
-                    ? TimeSpan.FromDays(60) 
-                    : TimeSpan.FromDays(14)         // Match refresh token expiry
-            };
+            var cookieOptions = CreateSecureCookieOptions(request.RememberMe 
+                ? TimeSpan.FromDays(60) 
+                : TimeSpan.FromDays(14));
             
             Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
 
@@ -148,10 +140,10 @@ public sealed class AuthController : BaseApiController
                 Roles: user.UserRoles.Select(ur => ur.Role.Name).ToList()
             );
 
-            // Don't return refresh token in response - it's now in httpOnly cookie
+            // Return refresh token in response for frontend compatibility
             var authResponse = new AuthResponse(
                 AccessToken: accessToken,
-                RefreshToken: null, // Removed - now stored securely in httpOnly cookie
+                RefreshToken: refreshTokenValue, // Return for frontend usage
                 ExpiresAt: expiresAt,
                 User: userInfo
             );
@@ -334,7 +326,7 @@ public sealed class AuthController : BaseApiController
     /// <summary>
     /// Refresh access token using refresh token from httpOnly cookie
     /// </summary>
-    [HttpPost("refresh")]
+    [HttpGet("refresh")]
     [ProducesResponseType(typeof(ApiResponse<RefreshTokenResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken = default)
@@ -409,14 +401,7 @@ public sealed class AuthController : BaseApiController
             await _context.SaveChangesAsync(cancellationToken);
 
             // Set new refresh token as httpOnly cookie (token rotation)
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = !HttpContext.Request.IsHttps ? false : true,
-                SameSite = SameSiteMode.Strict,
-                Path = "/auth",
-                MaxAge = TimeSpan.FromDays(14)
-            };
+            var cookieOptions = CreateSecureCookieOptions(TimeSpan.FromDays(14));
             
             Response.Cookies.Append("refreshToken", newRefreshTokenValue, cookieOptions);
 
@@ -426,10 +411,10 @@ public sealed class AuthController : BaseApiController
             var expiryMinutes = jwtExpiryMinutes ?? 15;
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
 
-            // Don't return refresh token in response - it's in httpOnly cookie
+            // Return refresh token in response for frontend compatibility
             var response = new RefreshTokenResponse(
                 AccessToken: accessToken,
-                RefreshToken: null, // Removed - now stored securely in httpOnly cookie
+                RefreshToken: newRefreshTokenValue, // Return for frontend usage
                 ExpiresAt: expiresAt
             );
 
@@ -477,11 +462,8 @@ public sealed class AuthController : BaseApiController
             }
 
             // Clear the refresh token cookie
-            Response.Cookies.Delete("refreshToken", new CookieOptions
-            {
-                Path = "/auth",
-                SameSite = SameSiteMode.Strict
-            });
+            var deleteCookieOptions = CreateSecureCookieOptions();
+            Response.Cookies.Delete("refreshToken", deleteCookieOptions);
 
             var response = new LogoutResponse(
                 Message: "Logged out successfully",
@@ -623,6 +605,26 @@ public sealed class AuthController : BaseApiController
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes).Replace("+", "").Replace("/", "").Replace("=", "")[..8].ToUpper();
+    }
+
+    /// <summary>
+    /// Test endpoint to check cookie functionality (development only)
+    /// </summary>
+    [HttpGet("test-cookies")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public IActionResult TestCookies()
+    {
+        var isHttps = HttpContext.Request.IsHttps;
+        var cookieValue = Request.Cookies.TryGetValue("refreshToken", out var cookie) ? cookie : "Not found";
+        
+        return Ok(new ApiResponse<object>(new
+        {
+            IsHttps = isHttps,
+            RefreshTokenCookie = cookieValue != "Not found" ? "Present" : "Not found",
+            AllCookies = Request.Cookies.Keys.ToArray(),
+            UserAgent = Request.Headers.UserAgent.ToString(),
+            Origin = Request.Headers.Origin.ToString()
+        }));
     }
 
     /// <summary>
@@ -1121,13 +1123,8 @@ public sealed class AuthController : BaseApiController
         var accessToken = _jwtService.GenerateToken(user, session.Id);
 
         // Set refresh token cookie
-        var cookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = refreshToken.ExpiresAt
-        };
+        var cookieOptions = CreateSecureCookieOptions();
+        cookieOptions.Expires = refreshToken.ExpiresAt;
         Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
 
         var userInfo = new UserInfo(
@@ -1142,7 +1139,7 @@ public sealed class AuthController : BaseApiController
             user.UserRoles.Select(ur => ur.Role.Name).ToArray()
         );
 
-        return new AuthResponse(accessToken, null, DateTimeOffset.UtcNow.AddMinutes(15), userInfo);
+        return new AuthResponse(accessToken, refreshTokenValue, DateTimeOffset.UtcNow.AddMinutes(15), userInfo);
     }
 
     private async Task<string> GenerateUniqueUsername(string baseName, CancellationToken cancellationToken)
@@ -1169,6 +1166,25 @@ public sealed class AuthController : BaseApiController
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes);
+    }
+
+    // Helper method for consistent cookie options
+    private CookieOptions CreateSecureCookieOptions(TimeSpan? maxAge = null)
+    {
+        var isHttps = HttpContext.Request.IsHttps;
+        var isDevelopment = _configuration.GetValue<bool>("IsDevelopment", false) || 
+                           !_configuration.GetValue<bool>("IsProduction", false);
+        
+        _logger.LogInformation("Cookie configuration - HTTPS: {IsHttps}, Development: {IsDevelopment}", isHttps, isDevelopment);
+        
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = isHttps, // Only secure on HTTPS, allow HTTP for localhost development
+            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax, // None for HTTPS cross-origin, Lax for HTTP localhost
+            Path = "/auth",
+            MaxAge = maxAge
+        };
     }
 
     // Google API response models
