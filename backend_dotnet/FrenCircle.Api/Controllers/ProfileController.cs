@@ -590,15 +590,20 @@ public sealed class ProfileController : BaseApiController
     // Helper methods (matching AuthController patterns)
     private static string HashPassword(string password)
     {
-        // Simple hash for demo - use BCrypt or similar in production
-        using var sha256 = SHA256.Create();
-        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hashedBytes);
+        // Use BCrypt for secure password hashing (matching AuthController)
+        return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
     }
 
     private static bool VerifyPassword(string password, string hash)
     {
-        return HashPassword(password) == hash;
+        try
+        {
+            return BCrypt.Net.BCrypt.Verify(password, hash);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string HashToken(string token)
