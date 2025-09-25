@@ -254,3 +254,37 @@ export interface ChangePasswordResponse {
   };
   meta: any | null;
 }
+
+// Session Management Types
+export interface SessionData {
+  id: string;
+  authMethod: string;
+  ipAddress: string;
+  userAgent: string;
+  createdAt: string;
+  lastSeenAt: string;
+  isCurrentSession: boolean;
+}
+
+export interface GetSessionsResponse {
+  data: {
+    sessions: SessionData[];
+  };
+  meta: any | null;
+}
+
+export interface LogoutSessionResponse {
+  data: {
+    message: string;
+    deletedAt: string;
+  };
+  meta: any | null;
+}
+
+export interface LogoutAllSessionsResponse {
+  data: {
+    message: string;
+    deletedAt: string;
+  };
+  meta: any | null;
+}

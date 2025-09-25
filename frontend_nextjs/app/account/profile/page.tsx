@@ -415,6 +415,11 @@ export default function ProfilePage() {
                 {/* Action Buttons - Only show when not editing */}
                 {!isEditing && (
                   <div className="flex flex-wrap gap-3 pt-4">
+                    <Link href="/account/insights">
+                      <Button variant="default">
+                        View Insights
+                      </Button>
+                    </Link>
                     <Button variant="outline">
                       Change Password
                     </Button>
@@ -429,33 +434,7 @@ export default function ProfilePage() {
             </Card>
           </motion.div>
 
-          {/* Quick Stats Card */}
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Activity</CardTitle>
-                <CardDescription>
-                  Your account statistics and activity overview
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 rounded-lg border">
-                    <div className="text-2xl font-bold text-primary">0</div>
-                    <div className="text-sm text-muted-foreground">Posts</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg border">
-                    <div className="text-2xl font-bold text-primary">0</div>
-                    <div className="text-sm text-muted-foreground">Friends</div>
-                  </div>
-                  <div className="text-center p-4 rounded-lg border">
-                    <div className="text-2xl font-bold text-primary">1</div>
-                    <div className="text-sm text-muted-foreground">Days Active</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+
         </motion.div>
       </div>
     </div>

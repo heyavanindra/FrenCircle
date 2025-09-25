@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, LogOut, User, Sun, Moon, Settings, UserCircle } from "lucide-react";
+import { Menu, LogOut, User, Sun, Moon, Settings, UserCircle, BarChart3, Layout, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -106,9 +106,27 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/account/insights" className="cursor-pointer">
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      Insights
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/account/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled className="cursor-not-allowed opacity-50">
+                    <Layout className="mr-2 h-4 w-4" />
+                    Dashboard
+                    <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/security" className="cursor-pointer">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Security
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -191,12 +209,33 @@ export default function Navbar() {
                           Profile
                         </Link>
                         <Link
+                          href="/account/insights"
+                          className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                        >
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          Insights
+                        </Link>
+                        <Link
                           href="/account/settings"
                           className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
                         >
                           <Settings className="h-4 w-4 mr-2" />
                           Settings
                         </Link>
+                        <div className="border-t pt-3 mt-3 space-y-1">
+                          <div className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground opacity-50">
+                            <Layout className="h-4 w-4 mr-2" />
+                            Dashboard
+                            <span className="ml-auto text-xs">Soon</span>
+                          </div>
+                          <Link
+                            href="/account/security"
+                            className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            Security
+                          </Link>
+                        </div>
                       </div>
                     </>
                   )}
