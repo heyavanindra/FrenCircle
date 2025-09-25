@@ -19,7 +19,7 @@ public class JwtService : IJwtService
         _logger = logger;
     }
 
-    public string GenerateToken(User user)
+    public string GenerateToken(User user, Guid? sessionId = null)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_jwtSettings.SecretKey);
@@ -33,6 +33,13 @@ public class JwtService : IJwtService
             new("username", user.Username),
             new("email_verified", user.EmailVerified.ToString().ToLower())
         };
+
+        // Add session ID if provided
+        if (sessionId.HasValue)
+        {
+            claims.Add(new Claim("session_id", sessionId.Value.ToString()));
+            claims.Add(new Claim("sid", sessionId.Value.ToString())); // Standard session ID claim
+        }
 
         // Add display name if available
         if (!string.IsNullOrEmpty(user.DisplayName))

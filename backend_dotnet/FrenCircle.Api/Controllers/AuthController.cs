@@ -130,8 +130,8 @@ public sealed class AuthController : BaseApiController
             
             Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
 
-            // Generate JWT access token
-            var accessToken = _jwtService.GenerateToken(user);
+            // Generate JWT access token with session ID
+            var accessToken = _jwtService.GenerateToken(user, session.Id);
             var jwtExpiryMinutes = _configuration.GetSection("JWT:ExpiryMinutes").Get<int?>();
             var expiryMinutes = jwtExpiryMinutes ?? 15;
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
@@ -420,8 +420,8 @@ public sealed class AuthController : BaseApiController
             
             Response.Cookies.Append("refreshToken", newRefreshTokenValue, cookieOptions);
 
-            // Generate new JWT access token
-            var accessToken = _jwtService.GenerateToken(refreshToken.User);
+            // Generate new JWT access token with session ID
+            var accessToken = _jwtService.GenerateToken(refreshToken.User, refreshToken.SessionId);
             var jwtExpiryMinutes = _configuration.GetSection("JWT:ExpiryMinutes").Get<int?>();
             var expiryMinutes = jwtExpiryMinutes ?? 15;
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
@@ -1117,8 +1117,8 @@ public sealed class AuthController : BaseApiController
         _context.RefreshTokens.Add(refreshToken);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Generate JWT
-        var accessToken = _jwtService.GenerateToken(user);
+        // Generate JWT with session ID
+        var accessToken = _jwtService.GenerateToken(user, session.Id);
 
         // Set refresh token cookie
         var cookieOptions = new CookieOptions

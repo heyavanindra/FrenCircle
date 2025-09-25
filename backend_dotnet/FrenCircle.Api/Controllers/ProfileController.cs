@@ -297,8 +297,21 @@ public sealed class ProfileController : BaseApiController
                 return UnauthorizedProblem("Invalid user context");
             }
 
-            // Get current session ID from refresh token cookie if available
+            // Get current session ID from various methods
             var currentSessionId = await GetCurrentSessionId(userIdGuid, cancellationToken);
+
+            // Update the current session's LastSeenAt timestamp if we found it
+            if (currentSessionId.HasValue)
+            {
+                var currentSession = await _context.Sessions
+                    .FirstOrDefaultAsync(s => s.Id == currentSessionId.Value, cancellationToken);
+                
+                if (currentSession != null)
+                {
+                    currentSession.LastSeenAt = DateTimeOffset.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+            }
 
             var sessions = await _context.Sessions
                 .Where(s => s.UserId == userIdGuid && s.RevokedAt == null)
@@ -588,19 +601,60 @@ public sealed class ProfileController : BaseApiController
         return HashPassword(password) == hash;
     }
 
+    private static string HashToken(string token)
+    {
+        using var sha256 = SHA256.Create();
+        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token));
+        return Convert.ToBase64String(hashedBytes);
+    }
+
     private async Task<Guid?> GetCurrentSessionId(Guid userId, CancellationToken cancellationToken)
     {
-        // Try to get current session from refresh token cookie
+        // Method 1: Try to get session ID from JWT token claims (if sessionId claim exists)
+        var sessionIdClaim = User.FindFirst("sessionId")?.Value ?? User.FindFirst("sid")?.Value;
+        if (!string.IsNullOrEmpty(sessionIdClaim) && Guid.TryParse(sessionIdClaim, out var sessionIdFromToken))
+        {
+            // Verify this session still exists and is active
+            var sessionExists = await _context.Sessions
+                .AnyAsync(s => s.Id == sessionIdFromToken && s.UserId == userId && s.RevokedAt == null, cancellationToken);
+            
+            if (sessionExists)
+                return sessionIdFromToken;
+        }
+
+        // Method 2: Try to identify from refresh token cookie (if refresh tokens are hashed properly)
         if (Request.Cookies.TryGetValue("refreshToken", out var refreshTokenValue) && 
             !string.IsNullOrEmpty(refreshTokenValue))
         {
+            // Hash the refresh token value to compare with stored hashes
+            var hashedToken = HashToken(refreshTokenValue);
             var refreshToken = await _context.RefreshTokens
-                .Where(rt => rt.UserId == userId && rt.RevokedAt == null)
-                .FirstOrDefaultAsync(rt => VerifyPassword(refreshTokenValue, rt.TokenHash), cancellationToken);
+                .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.TokenHash == hashedToken)
+                .FirstOrDefaultAsync(cancellationToken);
             
-            return refreshToken?.SessionId;
+            if (refreshToken != null)
+                return refreshToken.SessionId;
         }
+
+        // Method 3: Use IP and User Agent matching as fallback
+        var currentIp = Request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var currentUserAgent = Request.Headers.UserAgent.ToString() ?? "unknown";
         
-        return null;
+        var matchingSession = await _context.Sessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .Where(s => s.IpAddress.ToString() == currentIp && s.UserAgent == currentUserAgent)
+            .OrderByDescending(s => s.LastSeenAt)
+            .FirstOrDefaultAsync(cancellationToken);
+            
+        if (matchingSession != null)
+            return matchingSession.Id;
+
+        // Method 4: Fallback to most recent active session
+        var recentSession = await _context.Sessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .OrderByDescending(s => s.LastSeenAt)
+            .FirstOrDefaultAsync(cancellationToken);
+            
+        return recentSession?.Id;
     }
 }
