@@ -589,7 +589,7 @@ export default function SecurityPage() {
                 <div className="space-y-3 text-sm text-muted-foreground">
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                    <p>Use a strong, unique password that you don't use anywhere else.</p>
+                    <p>Use a strong, unique password that you don&apos;t use anywhere else.</p>
                   </div>
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
@@ -703,7 +703,7 @@ export default function SecurityPage() {
                     <div className="text-sm">
                       <p className="font-medium text-red-800 dark:text-red-200">Security Note</p>
                       <p className="text-red-700 dark:text-red-300 mt-1">
-                        This action will immediately logout this device. If this is a device you don't recognize, logging it out is recommended for security.
+                        This action will immediately logout this device. If this is a device you don&apos;t recognize, logging it out is recommended for security.
                       </p>
                     </div>
                   </div>

@@ -194,7 +194,7 @@ export default function InsightsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <BarChart3 className="h-5 w-5 mr-2" />
-                  This Month's Summary
+                  This Month&apos;s Summary
                 </CardTitle>
                 <CardDescription>
                   Your activity breakdown for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
