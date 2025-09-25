@@ -57,7 +57,7 @@ curl -X GET "https://localhost:7001/profile" \
 Update profile information (excluding password).
 
 ```bash
-curl -X PUT "https://localhost:7001/profile" \
+curl -X POST "https://localhost:7001/profile" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)" \
@@ -101,7 +101,7 @@ curl -X PUT "https://localhost:7001/profile" \
 
 **Partial Update Example:**
 ```bash
-curl -X PUT "https://localhost:7001/profile" \
+curl -X POST "https://localhost:7001/profile" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)" \
@@ -116,7 +116,7 @@ curl -X PUT "https://localhost:7001/profile" \
 Change the user's password (requires current password verification).
 
 ```bash
-curl -X PUT "https://localhost:7001/profile/password" \
+curl -X POST "https://localhost:7001/profile/password" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)" \
@@ -188,7 +188,7 @@ curl -X GET "https://localhost:7001/profile/sessions" \
 Logout from a specific session by its ID.
 
 ```bash
-curl -X DELETE "https://localhost:7001/profile/sessions/11111111-2222-3333-4444-555555556666" \
+curl -X POST "https://localhost:7001/profile/sessions/11111111-2222-3333-4444-555555556666/logout" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)"
@@ -211,7 +211,7 @@ curl -X DELETE "https://localhost:7001/profile/sessions/11111111-2222-3333-4444-
 Logout from all sessions except the current one.
 
 ```bash
-curl -X DELETE "https://localhost:7001/profile/sessions" \
+curl -X POST "https://localhost:7001/profile/sessions/logout-all" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)"
@@ -236,7 +236,7 @@ curl -X DELETE "https://localhost:7001/profile/sessions" \
 Permanently delete the user account (requires password confirmation and exact confirmation text).
 
 ```bash
-curl -X DELETE "https://localhost:7001/profile" \
+curl -X POST "https://localhost:7001/profile/delete" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)" \

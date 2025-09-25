@@ -89,7 +89,7 @@ public sealed class ProfileController : BaseApiController
     /// <summary>
     /// Update user's profile information (excluding password)
     /// </summary>
-    [HttpPut("")]
+    [HttpPost("")]
     [ProducesResponseType(typeof(ApiResponse<ProfileUpdateResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -195,7 +195,7 @@ public sealed class ProfileController : BaseApiController
     /// <summary>
     /// Change user's password
     /// </summary>
-    [HttpPut("password")]
+    [HttpPost("password")]
     [ProducesResponseType(typeof(ApiResponse<PasswordChangeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -330,7 +330,7 @@ public sealed class ProfileController : BaseApiController
     /// <summary>
     /// Logout from a specific session (revoke session and its refresh tokens)
     /// </summary>
-    [HttpDelete("sessions/{sessionId:guid}")]
+    [HttpPost("sessions/{sessionId:guid}/logout")]
     [ProducesResponseType(typeof(ApiResponse<SessionDeleteResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -396,7 +396,7 @@ public sealed class ProfileController : BaseApiController
     /// <summary>
     /// Logout from all other sessions (except current one)
     /// </summary>
-    [HttpDelete("sessions")]
+    [HttpPost("sessions/logout-all")]
     [ProducesResponseType(typeof(ApiResponse<SessionDeleteResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> LogoutFromAllOtherSessions(CancellationToken cancellationToken = default)
@@ -463,7 +463,7 @@ public sealed class ProfileController : BaseApiController
     /// <summary>
     /// Delete user account permanently (requires password confirmation)
     /// </summary>
-    [HttpDelete("")]
+    [HttpPost("delete")]
     [ProducesResponseType(typeof(ApiResponse<AccountDeleteResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]

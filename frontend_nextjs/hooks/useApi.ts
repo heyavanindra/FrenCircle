@@ -67,15 +67,19 @@ export function useGet<T = any>(
 
   // Auto-fetch on mount and when dependencies change
   useEffect(() => {
+    mountedRef.current = true;
     const shouldFetch = config?.enabled !== false;
     if (shouldFetch && endpoint) {
       fetchData();
     }
+  }, [fetchData, config?.enabled, endpoint]);
 
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
-  }, [fetchData, config?.enabled, endpoint]);
+  }, []);
 
   return {
     data,

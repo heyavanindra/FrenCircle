@@ -199,3 +199,58 @@ export interface GoogleCallbackResponse {
     roles: string[];
   };
 }
+
+// Profile API Types
+export interface ProfileData {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  username: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
+  bio?: string;
+  avatarUrl: string | null;
+  timezone?: string;
+  locale?: string;
+  verifiedBadge: boolean;
+  createdAt: string;
+  updatedAt: string;
+  roles: string[];
+}
+
+export interface GetProfileResponse {
+  data: ProfileData;
+  meta: any | null;
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  bio?: string;
+  timezone?: string;
+  locale?: string;
+}
+
+export interface UpdateProfileResponse {
+  data: {
+    message: string;
+    updatedAt: string;
+    profile: ProfileData;
+  };
+  meta: any | null;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  data: {
+    message: string;
+    changedAt: string;
+  };
+  meta: any | null;
+}
