@@ -1,20 +1,48 @@
 using FrenCircle.Api.Configuration;
-using FrenCircle.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
-using System;
+using Serilog;
 using System.Security.Claims;
 using System.Text;
-using Serilog;
 
 namespace FrenCircle.Api.Extensions;
 
+/// <summary>
+/// Provides extension methods for configuring JWT authentication and authorization.
+/// </summary>
 public static class AuthExtensions
 {
-    public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration, IHostEnvironment env)
+    /// <summary>
+    /// Configures JWT authentication and authorization using the provided <see cref="JwtSettings"/>.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add services to.</param>
+    /// <param name="configuration">The application configuration containing the "JWT" section.</param>
+    /// <param name="env">The current host environment.</param>
+    /// <returns>The <see cref="IServiceCollection"/> for chaining.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the JWT configuration section is missing or invalid (e.g., missing secret key).
+    /// </exception>
+    /// <example>
+    /// Example configuration in <c>appsettings.json</c>:
+    /// <code json>
+    /// {
+    ///   "JWT": {
+    ///     "Issuer": "your-issuer",
+    ///     "Audience": "your-audience",
+    ///     "SecretKey": "your-very-strong-secret"
+    ///   }
+    /// }
+    /// </code>
+    ///
+    /// Example usage in <c>Program.cs</c>:
+    /// <code>
+    /// builder.Services.AddJwtAuthentication(builder.Configuration, builder.Environment);
+    /// </code>
+    /// </example>
+    public static IServiceCollection AddJwtAuthentication(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment env)
     {
         services.Configure<JwtSettings>(configuration.GetSection("JWT"));
         var jwtSettings = configuration.GetSection("JWT").Get<JwtSettings>();

@@ -46,6 +46,7 @@ public sealed class ProfileController : BaseApiController
             }
 
             var user = await _context.Users
+                .AsNoTracking()
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == userIdGuid, cancellationToken);
@@ -192,6 +193,10 @@ public sealed class ProfileController : BaseApiController
         }
     }
 
+    // Purpose: Allow users to change their password. The current password is required
+    // by default for security, but when the current session was created via Google
+    // sign-in we skip asking for the current password (useful for Google-auth users
+    // who don't have a local password set).
     /// <summary>
     /// Change user's password
     /// </summary>
@@ -212,7 +217,7 @@ public sealed class ProfileController : BaseApiController
                 return UnauthorizedProblem("Invalid user context");
             }
 
-            var user = await _context.Users
+            var user = await _context.Users.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userIdGuid, cancellationToken);
 
             if (user == null)
@@ -221,12 +226,25 @@ public sealed class ProfileController : BaseApiController
                 return NotFoundProblem("User not found");
             }
 
-            // Verify current password
-            if (!VerifyPassword(request.CurrentPassword, user.PasswordHash))
-            {
-                _logger.LogWarning("Invalid current password provided by user {UserId}", UserId);
-                return BadRequestProblem("Current password is incorrect");
-            }
+                // Determine whether to require the current password. If the current session
+                // used Google as the auth method we will skip current-password verification.
+                var currentSessionId = await GetCurrentSessionId(userIdGuid, cancellationToken);
+                var currentSession = currentSessionId.HasValue
+                    ? await _context.Sessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == currentSessionId.Value, cancellationToken)
+                    : null;
+
+                var signedInViaGoogle = currentSession != null &&
+                    string.Equals(currentSession.AuthMethod, "google", StringComparison.OrdinalIgnoreCase);
+
+                if (!signedInViaGoogle)
+                {
+                    // Verify current password for non-Google sessions
+                    if (!VerifyPassword(request.CurrentPassword, user.PasswordHash))
+                    {
+                        _logger.LogWarning("Invalid current password provided by user {UserId}", UserId);
+                        return BadRequestProblem("Current password is incorrect");
+                    }
+                }
 
             // Validate new password length
             var minPasswordLength = await _context.AppConfigs
@@ -300,12 +318,12 @@ public sealed class ProfileController : BaseApiController
             // Get current session ID from various methods
             var currentSessionId = await GetCurrentSessionId(userIdGuid, cancellationToken);
 
-            // Update the current session's LastSeenAt timestamp if we found it
+            // If we found a current session id, update its LastSeenAt separately (load for update)
             if (currentSessionId.HasValue)
             {
                 var currentSession = await _context.Sessions
                     .FirstOrDefaultAsync(s => s.Id == currentSessionId.Value, cancellationToken);
-                
+
                 if (currentSession != null)
                 {
                     currentSession.LastSeenAt = DateTimeOffset.UtcNow;
@@ -313,7 +331,9 @@ public sealed class ProfileController : BaseApiController
                 }
             }
 
+            // Use AsNoTracking for read-only sessions list
             var sessions = await _context.Sessions
+                .AsNoTracking()
                 .Where(s => s.UserId == userIdGuid && s.RevokedAt == null)
                 .OrderByDescending(s => s.LastSeenAt)
                 .Select(s => new SessionInfo(

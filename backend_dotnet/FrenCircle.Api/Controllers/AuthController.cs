@@ -176,7 +176,7 @@ public sealed class AuthController : BaseApiController
         try
         {
             // Check if signup is disabled
-            var signupDisabled = await _context.AppConfigs
+            var signupDisabled = await _context.AppConfigs.AsNoTracking()
                 .Where(ac => ac.Key == "SignupDisabled")
                 .Select(ac => ac.Value == "true")
                 .FirstOrDefaultAsync(cancellationToken);
@@ -187,7 +187,7 @@ public sealed class AuthController : BaseApiController
             }
 
             // Check if user already exists
-            var existingUser = await _context.Users
+            var existingUser = await _context.Users.AsNoTracking()
                 .AnyAsync(u => u.Email == request.Email, cancellationToken);
 
             if (existingUser)
@@ -218,7 +218,7 @@ public sealed class AuthController : BaseApiController
             }
 
             // Check if username is taken (case-insensitive)
-            var existingUsername = await _context.Users
+            var existingUsername = await _context.Users.AsNoTracking()
                 .AnyAsync(u => u.Username.ToLower() == request.Username.ToLower(), cancellationToken);
 
             if (existingUsername)
@@ -227,7 +227,7 @@ public sealed class AuthController : BaseApiController
             }
 
             // Validate password requirements
-            var minPasswordLength = await _context.AppConfigs
+            var minPasswordLength = await _context.AppConfigs.AsNoTracking()
                 .Where(ac => ac.Key == "PasswordMinLength")
                 .Select(ac => int.Parse(ac.Value))
                 .FirstOrDefaultAsync(cancellationToken);
@@ -255,7 +255,7 @@ public sealed class AuthController : BaseApiController
             _context.Users.Add(user);
 
             // Assign default user role
-            var userRole = await _context.Roles
+            var userRole = await _context.Roles.AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Name == "user", cancellationToken);
 
             if (userRole != null)
@@ -623,6 +623,7 @@ public sealed class AuthController : BaseApiController
         }
 
         var user = await _context.Users
+            .AsNoTracking()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
@@ -680,7 +681,7 @@ public sealed class AuthController : BaseApiController
 
         try
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
 
             if (user == null)
             {
@@ -1059,6 +1060,14 @@ public sealed class AuthController : BaseApiController
         if (existingExternalLogin != null)
         {
             _logger.LogInformation("Found existing Google user {UserId}", existingExternalLogin.User.Id);
+            // Ensure user's email is marked verified when they sign in via Google
+            if (!existingExternalLogin.User.EmailVerified)
+            {
+                existingExternalLogin.User.EmailVerified = true;
+                existingExternalLogin.User.UpdatedAt = DateTimeOffset.UtcNow;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
             return existingExternalLogin.User;
         }
 
@@ -1082,6 +1091,13 @@ public sealed class AuthController : BaseApiController
             };
 
             _context.ExternalLogins.Add(externalLogin);
+            // If the existing user's email wasn't verified, trust Google's verification and mark it verified
+            if (!existingUser.EmailVerified)
+            {
+                existingUser.EmailVerified = true;
+                existingUser.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Linked Google account to existing user {UserId}", existingUser.Id);
@@ -1093,7 +1109,8 @@ public sealed class AuthController : BaseApiController
         {
             Id = Guid.NewGuid(),
             Email = googleUser.Email,
-            EmailVerified = googleUser.VerifiedEmail, // Google already verified the email
+            // Always treat Google signups as verified (Google verifies ownership)
+            EmailVerified = true,
             PasswordHash = GenerateRandomHash(), // They won't use password login
             FirstName = googleUser.GivenName,
             LastName = googleUser.FamilyName,
