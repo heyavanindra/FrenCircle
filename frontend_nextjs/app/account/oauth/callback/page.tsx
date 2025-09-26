@@ -43,53 +43,141 @@ export default function OAuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        // Check if this is a redirect from our backend with auth results
+        const success = searchParams.get("success");
+        const token = searchParams.get("token");
+        const expires = searchParams.get("expires");
+        const error = searchParams.get("error");
+        
+        // Legacy: Check for direct OAuth parameters (if Google redirects directly)
         const code = searchParams.get("code");
         const state = searchParams.get("state");
         const errorParam = searchParams.get("error");
 
-        // Check for OAuth errors
-        if (errorParam) {
-          throw new Error(`OAuth error: ${errorParam}`);
-        }
-
-        if (!code || !state) {
-          throw new Error("Missing OAuth parameters");
-        }
-
-        // Call backend callback endpoint
-        const response = await get<GoogleCallbackResponse>(`/auth/google/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
-
-        if (response.data?.accessToken && response.data?.user) {
-          const data = response.data;
+        // Handle backend redirect with auth results (new approach)
+        if (success === "true" && token) {
+          // Authentication successful - backend already processed everything
+          const expiresAt = expires ? new Date(expires) : new Date(Date.now() + 15 * 60 * 1000);
           
           // Set access token in localStorage
-          setToken(data.accessToken);
+          setToken(token);
           
-          // Update user context with user data
-          setUser({
-            id: data.user.id,
-            firstName: data.user.firstName,
-            lastName: data.user.lastName,
-            username: data.user.username,
-            email: data.user.email,
-            avatarUrl: data.user.avatarUrl || undefined,
-            login: true,
-            expiry: new Date(data.expiresAt),
-            role: data.user.roles[0] || 'user'
-          });
+          // Get user info from the /auth/me endpoint
+          try {
+            const userResponse = await get<{ 
+              data: {
+                id: string;
+                email: string;
+                emailVerified: boolean;
+                username: string;
+                firstName: string;
+                lastName: string;
+                avatarUrl: string | null;
+                createdAt: string;
+                roles: string[];
+              };
+              meta: any | null;
+            }>("/auth/me");
 
-          setState("success");
-          toast.success("Successfully logged in with Google!");
+            if (userResponse.data?.data) {
+              const userData = userResponse.data.data;
+              
+              // Update user context with user data
+              setUser({
+                id: userData.id,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                username: userData.username,
+                email: userData.email,
+                avatarUrl: userData.avatarUrl || undefined,
+                login: true,
+                expiry: expiresAt,
+                role: userData.roles[0] || 'user'
+              });
+            }
+            
+            setState("success");
+            toast.success("Successfully logged in with Google!");
 
-          // Redirect after a short delay
-          setTimeout(() => {
-            const redirectUrl = localStorage.getItem("oauthRedirect") || "/";
-            localStorage.removeItem("oauthRedirect");
-            router.push(redirectUrl);
-          }, 2000);
+            // Redirect after a short delay
+            setTimeout(() => {
+              const redirectUrl = localStorage.getItem("oauthRedirect") || "/";
+              localStorage.removeItem("oauthRedirect");
+              router.push(redirectUrl);
+            }, 2000);
+            
+          } catch (error) {
+            console.error("Error getting user info:", error);
+            // Set basic user state even if we can't get full user info
+            setUser({
+              id: 'temp',
+              firstName: 'User',
+              lastName: '',
+              username: 'user',
+              email: 'user@example.com',
+              login: true,
+              expiry: expiresAt
+            });
+            
+            setState("success");
+            toast.success("Successfully logged in with Google!");
 
-        } else {
-          throw new Error("Invalid response from server");
+            setTimeout(() => {
+              const redirectUrl = localStorage.getItem("oauthRedirect") || "/";
+              localStorage.removeItem("oauthRedirect");
+              router.push(redirectUrl);
+            }, 2000);
+          }
+        }
+        // Handle backend redirect with error (new approach)
+        else if (success === "false" || error) {
+          throw new Error(error || "Authentication failed");
+        }
+        // Handle direct OAuth callback (legacy approach - if Google redirects directly to frontend)
+        else if (code && state) {
+          // Check for OAuth errors
+          if (errorParam) {
+            throw new Error(`OAuth error: ${errorParam}`);
+          }
+
+          // Call backend callback endpoint
+          const response = await get<GoogleCallbackResponse>(`/auth/google/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
+
+          if (response.data?.accessToken && response.data?.user) {
+            const data = response.data;
+            
+            // Set access token in localStorage
+            setToken(data.accessToken);
+            
+            // Update user context with user data
+            setUser({
+              id: data.user.id,
+              firstName: data.user.firstName,
+              lastName: data.user.lastName,
+              username: data.user.username,
+              email: data.user.email,
+              avatarUrl: data.user.avatarUrl || undefined,
+              login: true,
+              expiry: new Date(data.expiresAt),
+              role: data.user.roles[0] || 'user'
+            });
+
+            setState("success");
+            toast.success("Successfully logged in with Google!");
+
+            // Redirect after a short delay
+            setTimeout(() => {
+              const redirectUrl = localStorage.getItem("oauthRedirect") || "/";
+              localStorage.removeItem("oauthRedirect");
+              router.push(redirectUrl);
+            }, 2000);
+
+          } else {
+            throw new Error("Invalid response from server");
+          }
+        }
+        else {
+          throw new Error("Missing authentication parameters");
         }
 
       } catch (error: any) {

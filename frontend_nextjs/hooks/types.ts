@@ -174,8 +174,9 @@ export interface GoogleOAuthResponse {
 
 export interface GoogleInitResponse {
   data: {
-    authUrl: string; // Backend returns nested data.authUrl
+    authUrl: string; // Backend returns nested data.authUrl (lowercase)
   };
+  meta: any | null;
 }
 
 export interface GoogleCallbackRequest {
