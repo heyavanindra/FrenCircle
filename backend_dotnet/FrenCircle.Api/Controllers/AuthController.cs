@@ -608,6 +608,46 @@ public sealed class AuthController : BaseApiController
     }
 
     /// <summary>
+    /// Get current authenticated user information
+    /// </summary>
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(ApiResponse<UserInfo>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken = default)
+    {
+        var userIdString = UserId; // From BaseApiController
+        
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
+        {
+            return UnauthorizedProblem("Not authenticated");
+        }
+
+        var user = await _context.Users
+            .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user == null)
+        {
+            return UnauthorizedProblem("User not found");
+        }
+
+        var userInfo = new UserInfo(
+            Id: user.Id,
+            Email: user.Email,
+            EmailVerified: user.EmailVerified,
+            Username: user.Username,
+            FirstName: user.FirstName,
+            LastName: user.LastName,
+            AvatarUrl: user.AvatarUrl,
+            CreatedAt: user.CreatedAt,
+            Roles: user.UserRoles.Select(ur => ur.Role.Name).ToList()
+        );
+
+        return OkEnvelope(userInfo);
+    }
+
+    /// <summary>
     /// Test endpoint to check cookie functionality (development only)
     /// </summary>
     [HttpGet("test-cookies")]
@@ -942,12 +982,22 @@ public sealed class AuthController : BaseApiController
             var authResponse = await GenerateAuthResponse(user, "Google", cancellationToken);
 
             _logger.LogInformation("Google OAuth login successful for user {UserId}", user.Id);
-            return Ok(new ApiResponse<AuthResponse>(authResponse));
+            
+            // Instead of returning JSON, redirect back to frontend with success
+            var frontendUrl = _configuration.GetValue<string>("Frontend:BaseUrl", "http://localhost:3000");
+            var redirectUrl = $"{frontendUrl}/account/oauth/callback?success=true&token={authResponse.AccessToken}&expires={authResponse.ExpiresAt:yyyy-MM-ddTHH:mm:ssZ}";
+            
+            return Redirect(redirectUrl);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing Google OAuth callback");
-            return BadRequestProblem("OAuth authentication failed");
+            
+            // Redirect back to frontend with error
+            var frontendUrl = _configuration.GetValue<string>("Frontend:BaseUrl", "http://localhost:3000");
+            var errorUrl = $"{frontendUrl}/account/oauth/callback?success=false&error=authentication_failed";
+            
+            return Redirect(errorUrl);
         }
     }
 
