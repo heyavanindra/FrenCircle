@@ -25,7 +25,7 @@ public sealed class AuthController : BaseApiController
     private readonly FrenCircle.Infra.IEmailService _emailService;
 
     public AuthController(
-        ILogger<AuthController> logger, 
+        ILogger<AuthController> logger,
         FrenCircleDbContext context,
         IConfiguration configuration,
         IJwtService jwtService,
@@ -49,7 +49,7 @@ public sealed class AuthController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Login attempt for {EmailOrUsername} with CorrelationId {CorrelationId}", 
+        _logger.LogInformation("Login attempt for {EmailOrUsername} with CorrelationId {CorrelationId}",
             request.EmailOrUsername, CorrelationId);
 
         try
@@ -58,7 +58,7 @@ public sealed class AuthController : BaseApiController
             var user = await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(u => u.Email == request.EmailOrUsername || 
+                .FirstOrDefaultAsync(u => u.Email == request.EmailOrUsername ||
                                          u.Username == request.EmailOrUsername, cancellationToken);
 
             if (user == null)
@@ -104,8 +104,8 @@ public sealed class AuthController : BaseApiController
                 SessionId = session.Id,
                 TokenHash = HashToken(refreshTokenValue), // Store hash, not plain token
                 FamilyId = Guid.NewGuid(),
-                ExpiresAt = request.RememberMe 
-                    ? DateTimeOffset.UtcNow.AddDays(60) 
+                ExpiresAt = request.RememberMe
+                    ? DateTimeOffset.UtcNow.AddDays(60)
                     : DateTimeOffset.UtcNow.AddDays(14),
                 IssuedAt = DateTimeOffset.UtcNow
             };
@@ -116,16 +116,23 @@ public sealed class AuthController : BaseApiController
             await _context.SaveChangesAsync(cancellationToken);
 
             // Set refresh token as httpOnly cookie (secure storage)
-            var cookieOptions = CreateSecureCookieOptions(request.RememberMe 
-                ? TimeSpan.FromDays(60) 
+            var cookieOptions = CreateSecureCookieOptions(request.RememberMe
+                ? TimeSpan.FromDays(60)
                 : TimeSpan.FromDays(14));
-            
+
             Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
 
             // Generate JWT access token with session ID
             var accessToken = _jwtService.GenerateToken(user, session.Id);
             var jwtExpiryMinutes = _configuration.GetSection("JWT:ExpiryMinutes").Get<int?>();
+            // var expiryMinutes = jwtExpiryMinutes ?? 15;
+            // var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
             var expiryMinutes = jwtExpiryMinutes ?? 15;
+            if (expiryMinutes <= 0 || expiryMinutes > 24 * 60) // 1 day cap, tweak as you like
+            {
+                _logger.LogError("Invalid JWT:ExpiryMinutes value {Configured}. Falling back to 15.", jwtExpiryMinutes);
+                expiryMinutes = 15;
+            }
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
 
             var userInfo = BuildUserInfo(user, authMethod: "EmailPassword");
@@ -160,7 +167,7 @@ public sealed class AuthController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Registration attempt for email {Email} with CorrelationId {CorrelationId}", 
+        _logger.LogInformation("Registration attempt for email {Email} with CorrelationId {CorrelationId}",
             request.Email, CorrelationId);
 
         try
@@ -288,9 +295,9 @@ public sealed class AuthController : BaseApiController
             var userInfo = BuildUserInfo(user, userRole != null ? new[] { userRole.Name } : Array.Empty<string>());
 
             _logger.LogInformation("User {UserId} registered successfully", user.Id);
-            
+
             // TODO: Send verification email with token
-            
+
             return Created($"/auth/users/{user.Id}", new ApiResponse<UserInfo>(userInfo));
         }
         catch (Exception ex)
@@ -316,7 +323,7 @@ public sealed class AuthController : BaseApiController
         try
         {
             // Read refresh token from httpOnly cookie
-            if (!Request.Cookies.TryGetValue("refreshToken", out var refreshTokenValue) || 
+            if (!Request.Cookies.TryGetValue("refreshToken", out var refreshTokenValue) ||
                 string.IsNullOrEmpty(refreshTokenValue))
             {
                 _logger.LogWarning("Refresh token cookie not found or empty");
@@ -324,7 +331,7 @@ public sealed class AuthController : BaseApiController
             }
 
             var tokenHash = HashToken(refreshTokenValue);
-            
+
             // Find the refresh token by hash
             var refreshToken = await _context.RefreshTokens
                 .Include(rt => rt.User)
@@ -382,7 +389,7 @@ public sealed class AuthController : BaseApiController
 
             // Set new refresh token as httpOnly cookie (token rotation)
             var cookieOptions = CreateSecureCookieOptions(TimeSpan.FromDays(14));
-            
+
             Response.Cookies.Append("refreshToken", newRefreshTokenValue, cookieOptions);
 
             // Generate new JWT access token with session ID
@@ -424,7 +431,7 @@ public sealed class AuthController : BaseApiController
         try
         {
             // Read refresh token from httpOnly cookie
-            if (Request.Cookies.TryGetValue("refreshToken", out var refreshTokenValue) && 
+            if (Request.Cookies.TryGetValue("refreshToken", out var refreshTokenValue) &&
                 !string.IsNullOrEmpty(refreshTokenValue))
             {
                 // Find and revoke refresh token
@@ -436,7 +443,7 @@ public sealed class AuthController : BaseApiController
                 {
                     refreshToken.RevokedAt = DateTimeOffset.UtcNow;
                     await _context.SaveChangesAsync(cancellationToken);
-                    
+
                     _logger.LogInformation("User {UserId} logged out successfully", refreshToken.UserId);
                 }
             }
@@ -470,16 +477,16 @@ public sealed class AuthController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Email verification attempt for {Email} with CorrelationId {CorrelationId}", 
+        _logger.LogInformation("Email verification attempt for {Email} with CorrelationId {CorrelationId}",
             request.Email, CorrelationId);
 
         try
         {
             // Find verification token (comparing plain tokens for development)
             var otpCode = await _context.OtpCodes
-                .FirstOrDefaultAsync(oc => oc.Email == request.Email && 
-                                         oc.CodeHash == request.Token.ToUpper() && 
-                                         oc.Purpose == "Signup", 
+                .FirstOrDefaultAsync(oc => oc.Email == request.Email &&
+                                         oc.CodeHash == request.Token.ToUpper() &&
+                                         oc.Purpose == "Signup",
                                    cancellationToken);
 
             if (otpCode == null)
@@ -596,7 +603,7 @@ public sealed class AuthController : BaseApiController
     public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken = default)
     {
         var userIdString = UserId; // From BaseApiController
-        
+
         if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var userId))
         {
             return UnauthorizedProblem("Not authenticated");
@@ -615,7 +622,7 @@ public sealed class AuthController : BaseApiController
 
         // Determine auth method from session or fallback to external login detection
         string? authMethod = null;
-        
+
         // Try to get session ID from JWT claims
         var sessionClaim = User.FindFirst("session_id")?.Value ?? User.FindFirst("sid")?.Value;
         if (!string.IsNullOrEmpty(sessionClaim) && Guid.TryParse(sessionClaim, out var sessionId))
@@ -623,20 +630,20 @@ public sealed class AuthController : BaseApiController
             var session = await _context.Sessions
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, cancellationToken);
-            
+
             if (session != null)
             {
                 authMethod = session.AuthMethod;
             }
         }
-        
+
         // Fallback: if no session found, check external logins
         if (string.IsNullOrEmpty(authMethod))
         {
             var hasGoogleLogin = await _context.ExternalLogins
                 .AsNoTracking()
                 .AnyAsync(el => el.UserId == userId && el.Provider == "google", cancellationToken);
-            
+
             authMethod = hasGoogleLogin ? "Google" : "EmailPassword";
         }
 
@@ -654,7 +661,7 @@ public sealed class AuthController : BaseApiController
     {
         var isHttps = HttpContext.Request.IsHttps;
         var cookieValue = Request.Cookies.TryGetValue("refreshToken", out var cookie) ? cookie : "Not found";
-        
+
         return Ok(new ApiResponse<object>(new
         {
             IsHttps = isHttps,
@@ -673,7 +680,7 @@ public sealed class AuthController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Resend verification attempt for {Email} with CorrelationId {CorrelationId}", 
+        _logger.LogInformation("Resend verification attempt for {Email} with CorrelationId {CorrelationId}",
             request.Email, CorrelationId);
 
         try
@@ -720,7 +727,7 @@ public sealed class AuthController : BaseApiController
 
             return Ok(new ApiResponse<VerificationSentResponse>(
                 new VerificationSentResponse(
-                    "Verification code sent to your email", 
+                    "Verification code sent to your email",
                     DateTimeOffset.UtcNow
                 )
             ));
@@ -740,7 +747,7 @@ public sealed class AuthController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Forgot password attempt for {Email} with CorrelationId {CorrelationId}", 
+        _logger.LogInformation("Forgot password attempt for {Email} with CorrelationId {CorrelationId}",
             request.Email, CorrelationId);
 
         try
@@ -752,7 +759,7 @@ public sealed class AuthController : BaseApiController
                 // Don't reveal if user exists - security best practice
                 return Ok(new ApiResponse<VerificationSentResponse>(
                     new VerificationSentResponse(
-                        "If this email is registered, you will receive a password reset code", 
+                        "If this email is registered, you will receive a password reset code",
                         DateTimeOffset.UtcNow
                     )
                 ));
@@ -794,7 +801,7 @@ public sealed class AuthController : BaseApiController
 
             return Ok(new ApiResponse<VerificationSentResponse>(
                 new VerificationSentResponse(
-                    "Password reset code sent to your email", 
+                    "Password reset code sent to your email",
                     DateTimeOffset.UtcNow
                 )
             ));
@@ -814,7 +821,7 @@ public sealed class AuthController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Reset password attempt for {Email} with CorrelationId {CorrelationId}", 
+        _logger.LogInformation("Reset password attempt for {Email} with CorrelationId {CorrelationId}",
             request.Email, CorrelationId);
 
         try
@@ -828,10 +835,10 @@ public sealed class AuthController : BaseApiController
 
             // Find valid password reset token (comparing plain tokens for development)
             var otpCode = await _context.OtpCodes
-                .FirstOrDefaultAsync(oc => oc.Email == user.Email && 
-                                          oc.CodeHash == request.Token.ToUpper() && 
+                .FirstOrDefaultAsync(oc => oc.Email == user.Email &&
+                                          oc.CodeHash == request.Token.ToUpper() &&
                                           oc.Purpose == "PasswordReset" &&
-                                          !oc.ConsumedAt.HasValue, 
+                                          !oc.ConsumedAt.HasValue,
                                     cancellationToken);
 
             if (otpCode == null)
@@ -987,7 +994,7 @@ public sealed class AuthController : BaseApiController
         _logger.LogInformation("Initiating Google OAuth flow with CorrelationId {CorrelationId}", CorrelationId);
 
         var googleSettings = _configuration.GetSection("OAuth:Google").Get<GoogleOAuthSettings>();
-        
+
         if (googleSettings == null || string.IsNullOrEmpty(googleSettings.ClientId))
         {
             _logger.LogError("Google OAuth settings not configured");
@@ -995,7 +1002,7 @@ public sealed class AuthController : BaseApiController
         }
 
         var state = Guid.NewGuid().ToString();
-        
+
         var authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
                       $"?client_id={Uri.EscapeDataString(googleSettings.ClientId)}" +
                       $"&redirect_uri={Uri.EscapeDataString(googleSettings.RedirectUri)}" +
@@ -1048,26 +1055,26 @@ public sealed class AuthController : BaseApiController
 
             // Find or create user
             var user = await FindOrCreateGoogleUser(googleUser, cancellationToken);
-            
+
             // Generate JWT and refresh token
             var authResponse = await GenerateAuthResponse(user, "Google", cancellationToken);
 
             _logger.LogInformation("Google OAuth login successful for user {UserId}", user.Id);
-            
+
             // Instead of returning JSON, redirect back to frontend with success
             var frontendUrl = _configuration.GetValue<string>("Frontend:BaseUrl", "http://localhost:3000");
             var redirectUrl = $"{frontendUrl}/account/oauth/callback?success=true&token={authResponse.AccessToken}&expires={authResponse.ExpiresAt:yyyy-MM-ddTHH:mm:ssZ}";
-            
+
             return Redirect(redirectUrl);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing Google OAuth callback");
-            
+
             // Redirect back to frontend with error
             var frontendUrl = _configuration.GetValue<string>("Frontend:BaseUrl", "http://localhost:3000");
             var errorUrl = $"{frontendUrl}/account/oauth/callback?success=false&error=authentication_failed";
-            
+
             return Redirect(errorUrl);
         }
     }
@@ -1084,7 +1091,7 @@ public sealed class AuthController : BaseApiController
         });
 
         var response = await _httpClient.PostAsync("https://oauth2.googleapis.com/token", tokenRequest, cancellationToken);
-        
+
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Failed to exchange code for Google token. Status: {StatusCode}", response.StatusCode);
@@ -1092,9 +1099,9 @@ public sealed class AuthController : BaseApiController
         }
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        return JsonSerializer.Deserialize<GoogleTokenResponse>(content, new JsonSerializerOptions 
-        { 
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+        return JsonSerializer.Deserialize<GoogleTokenResponse>(content, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         });
     }
 
@@ -1104,7 +1111,7 @@ public sealed class AuthController : BaseApiController
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
 
         var response = await _httpClient.GetAsync("https://www.googleapis.com/oauth2/v2/userinfo", cancellationToken);
-        
+
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("Failed to get Google user info. Status: {StatusCode}", response.StatusCode);
@@ -1112,9 +1119,9 @@ public sealed class AuthController : BaseApiController
         }
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        return JsonSerializer.Deserialize<GoogleUserInfo>(content, new JsonSerializerOptions 
-        { 
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+        return JsonSerializer.Deserialize<GoogleUserInfo>(content, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
     }
 
@@ -1348,11 +1355,11 @@ public sealed class AuthController : BaseApiController
     private CookieOptions CreateSecureCookieOptions(TimeSpan? maxAge = null)
     {
         var isHttps = HttpContext.Request.IsHttps;
-        var isDevelopment = _configuration.GetValue<bool>("IsDevelopment", false) || 
+        var isDevelopment = _configuration.GetValue<bool>("IsDevelopment", false) ||
                            !_configuration.GetValue<bool>("IsProduction", false);
-        
+
         _logger.LogInformation("Cookie configuration - HTTPS: {IsHttps}, Development: {IsDevelopment}", isHttps, isDevelopment);
-        
+
         return new CookieOptions
         {
             HttpOnly = true,
