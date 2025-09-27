@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import AccessDenied from "@/components/AccessDenied";
 import { ArrowLeft, Camera, User, Mail, Calendar, Shield, Edit, Save, X, Clock, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { useUser, userHelpers } from "@/contexts/UserContext";
@@ -133,17 +134,7 @@ export default function ProfilePage() {
   };
 
   if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-muted-foreground mb-6">You need to be logged in to view this page.</p>
-          <Link href="/account/login">
-            <Button>Sign In</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   // Use profile data from API if available, otherwise fall back to user context

@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import Link from "next/link";
+import AccessDenied from "@/components/AccessDenied";
 import { 
   ArrowLeft, 
   Shield, 
@@ -346,17 +347,7 @@ export default function SecurityPage() {
   };
 
   if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-muted-foreground mb-6">You need to be logged in to view this page.</p>
-          <Link href="/account/login">
-            <Button>Sign In</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   return (

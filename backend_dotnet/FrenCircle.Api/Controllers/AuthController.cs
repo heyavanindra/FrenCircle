@@ -1363,22 +1363,4 @@ public sealed class AuthController : BaseApiController
         };
     }
 
-    // Google API response models
-    private record GoogleTokenResponse(
-        string AccessToken,
-        string RefreshToken,
-        int ExpiresIn,
-        string TokenType
-    );
-
-    private record GoogleUserInfo(
-        string Id,
-        string Email,
-        bool VerifiedEmail,
-        string Name,
-        string GivenName,
-        string FamilyName,
-        string Picture,
-        string Locale
-    );
 }

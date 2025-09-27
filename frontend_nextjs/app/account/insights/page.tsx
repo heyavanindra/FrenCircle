@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import AccessDenied from "@/components/AccessDenied";
 import { 
   ArrowLeft, 
   BarChart3, 
@@ -40,17 +41,7 @@ export default function InsightsPage() {
   const { user, isAuthenticated } = useUser();
 
   if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-muted-foreground mb-6">You need to be logged in to view this page.</p>
-          <Link href="/account/login">
-            <Button>Sign In</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   return (

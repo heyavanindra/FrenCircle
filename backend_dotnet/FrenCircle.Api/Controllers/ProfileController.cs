@@ -29,9 +29,6 @@ public sealed class ProfileController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProfileDetails(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Getting profile details for user {UserId} with CorrelationId {CorrelationId}", 
-            UserId, CorrelationId);
-
         try
         {
             if (!Guid.TryParse(UserId, out var userIdGuid))
@@ -515,7 +512,7 @@ public sealed class ProfileController(
                 return BadRequestProblem("Confirmation text must be exactly: DELETE MY ACCOUNT");
             }
 
-            var user = await _context.Users
+            var user = await _context.Users.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userIdGuid, cancellationToken);
 
             if (user == null)
