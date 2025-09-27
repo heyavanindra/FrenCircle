@@ -49,7 +49,8 @@ jobs:
               exit 1
             fi
             echo \"[fastapi] Lock acquired at \$(date -Is)\"
-            trap \"echo '[fastapi] Releasing lock'; flock -u 9\" EXIT
+            # Avoid single quotes inside this single-quoted script
+            trap \"echo [fastapi] Releasing lock; flock -u 9\" EXIT
 
             cd \"${REMOTE_DIR}\"
             git fetch --all --prune

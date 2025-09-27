@@ -50,8 +50,8 @@ jobs:
             fi
             echo \"[dotnet] Lock acquired at \$(date -Is)\"
 
-            # Ensure lock is released on exit
-            trap \"echo '[dotnet] Releasing lock'; flock -u 9\" EXIT
+            # Ensure lock is released on exit (avoid single quotes inside this single-quoted script)
+            trap \"echo [dotnet] Releasing lock; flock -u 9\" EXIT
 
             cd \"${REMOTE_DIR}\"
             git fetch --all --prune
