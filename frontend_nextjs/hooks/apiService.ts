@@ -5,7 +5,7 @@ import { ApiConfig, ApiResponse, ApiError, RequestConfig, RefreshTokenResponse }
 // This prevents the frontend from silently calling an unexpected production URL
 // when environment variables were not set at build/runtime.
 const DEFAULT_CONFIG: ApiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ class ApiService {
 
   // Build full URL
   private buildUrl(endpoint: string): string {
-    const baseURL = this.config.baseURL || '';
+    const baseURL = this.config.baseURL;
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     return `${baseURL}${cleanEndpoint}`;
   }
