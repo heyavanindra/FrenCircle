@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
-import AccessDenied from "@/components/AccessDenied";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { 
   ArrowLeft, 
   Settings as SettingsIcon, 
@@ -41,12 +41,8 @@ const itemVariants = {
 };
 
 export default function SettingsPage() {
-  const { user, isAuthenticated, logout } = useUser();
+  const { user, logout } = useUser();
   const { theme, toggleTheme } = useTheme();
-
-  if (!isAuthenticated || !user) {
-    return <AccessDenied />;
-  }
 
   const handleSaveSettings = () => {
     toast.success("Settings saved successfully!");
@@ -55,8 +51,9 @@ export default function SettingsPage() {
   // No Data & Account handlers here — moved to Security page
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -249,7 +246,8 @@ export default function SettingsPage() {
             </div>
           </motion.div>
         </motion.div>
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

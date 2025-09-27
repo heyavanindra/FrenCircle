@@ -30,7 +30,7 @@ class ApiService {
   // Set auth error callback (to clear user context)
   setAuthErrorCallback(callback: () => void) {
     this.onAuthError = () => {
-      console.log('🚨 onAuthError called - clearing user context');
+      console.log(' onAuthError called - clearing user context');
       callback();
     };
   }
@@ -117,12 +117,12 @@ class ApiService {
   private async performTokenRefresh(): Promise<string | null> {
     const url = this.buildUrl('/auth/refresh');
     
-    console.log('🔄 Attempting token refresh to:', url);
-    console.log('🍪 Document cookies:', document.cookie);
+    console.log(' Attempting token refresh to:', url);
+    console.log(' Document cookies:', document.cookie);
     
     // Check if refresh token cookie exists (it might be HTTP-only)
     const hasRefreshTokenCookie = document.cookie.includes('refreshToken=');
-    console.log('🍪 Refresh token cookie visible:', hasRefreshTokenCookie);
+    console.log(' Refresh token cookie visible:', hasRefreshTokenCookie);
     
     try {
       const response = await fetch(url, {
@@ -131,21 +131,21 @@ class ApiService {
         // No body or extra headers needed - refresh token is in HTTP-only cookie
       });
 
-      console.log('🔄 Refresh response status:', response.status);
-      console.log('🔄 Refresh response headers:', Object.fromEntries(response.headers.entries()));
+      console.log(' Refresh response status:', response.status);
+      console.log(' Refresh response headers:', Object.fromEntries(response.headers.entries()));
       
       // Check if new cookies were set
       const setCookieHeader = response.headers.get('set-cookie');
-      console.log('🍪 Set-Cookie header:', setCookieHeader);
+      console.log(' Set-Cookie header:', setCookieHeader);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('❌ Refresh failed with:', errorText);
+        console.log(' Refresh failed with:', errorText);
         throw new Error('Token refresh failed');
       }
 
       const data: RefreshTokenResponse = await response.json();
-      console.log('✅ Refresh successful');
+      console.log('Refresh successful');
       
       // Store new access token only (refresh token is in HTTP-only cookie)
       if (typeof window !== 'undefined') {
@@ -157,21 +157,68 @@ class ApiService {
           try {
             const userData = JSON.parse(existingUser);
             userData.expiry = data.data.expiresAt;
+            userData.login = true; // Ensure login status is maintained
             localStorage.setItem('frencircle_user', JSON.stringify(userData));
-            console.log('✅ Updated user expiry time');
+            console.log('Updated user expiry time and login status');
           } catch (error) {
             console.error('Error updating user expiry:', error);
           }
+        } else {
+          console.log('Token refresh successful but no user data found in localStorage');
         }
       }
 
+      // Auto-restore user session if needed
+      setTimeout(() => this.autoRestoreUserSession(), 100);
+
       return data.data.accessToken;
     } catch (error) {
-      console.log('❌ Token refresh error:', error);
+      console.log('Token refresh error:', error);
       // Clear access token on refresh failure (refresh token cookie will be handled by server)
       this.clearToken();
       this.onAuthError?.();
       return null;
+    }
+  }
+
+  // Auto-restore user session after successful token refresh
+  private async autoRestoreUserSession(): Promise<void> {
+    try {
+      // Check if we have a token but no user data
+      const hasToken = this.hasToken();
+      const existingUser = localStorage.getItem('frencircle_user');
+      
+      if (hasToken && !existingUser) {
+        console.log('Token found but no user data - fetching profile to restore session');
+        
+        const profileResponse = await this.get('/profile');
+        
+        if (profileResponse && profileResponse.data && profileResponse.data.data) {
+          const userData = profileResponse.data.data;
+          const restoredUser = {
+            id: userData.id,
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            username: userData.username || '',
+            email: userData.email || '',
+            avatarUrl: userData.avatarUrl,
+            login: true,
+            expiry: undefined,
+            role: userData.roles?.[0] || 'user',
+            preferences: userData.preferences
+          };
+          
+          localStorage.setItem('frencircle_user', JSON.stringify(restoredUser));
+          console.log('User session automatically restored to localStorage');
+          
+          // Trigger a custom event to notify the UserContext
+          window.dispatchEvent(new CustomEvent('userSessionRestored', { 
+            detail: restoredUser 
+          }));
+        }
+      }
+    } catch (error) {
+      console.log('Auto-restore user session failed:', error);
     }
   }
 
@@ -209,17 +256,17 @@ class ApiService {
             
             if (newAccessToken) {
               // Retry the original request with new token
-              console.log('✅ Token refresh successful, retrying original request');
+              console.log(' Token refresh successful, retrying original request');
               return this.request<T>(method, endpoint, data, config, true);
             } else {
               // Refresh returned null - refresh failed, clear user context
-              console.log('❌ Token refresh returned null, clearing user context');
+              console.log(' Token refresh returned null, clearing user context');
               this.clearToken();
               this.onAuthError?.();
             }
           } catch (refreshError) {
             // Token refresh threw an error, clear user context
-            console.log('❌ Token refresh threw error:', refreshError);
+            console.log(' Token refresh threw error:', refreshError);
             this.clearToken();
             this.onAuthError?.();
           }
@@ -314,6 +361,36 @@ class ApiService {
       accessToken: this.getToken(),
       refreshToken: this.getRefreshToken()
     };
+  }
+
+  // Attempt to restore session by refreshing token and fetching user profile
+  async attemptSessionRestore(): Promise<any | null> {
+    try {
+      console.log('🔄 Attempting session restore...');
+      
+      // First, try to refresh the token
+      const newAccessToken = await this.refreshAccessToken();
+      
+      if (!newAccessToken) {
+        console.log('❌ Session restore failed - no access token obtained');
+        return null;
+      }
+
+      // If token refresh succeeded, fetch user profile
+      console.log('Token refreshed, fetching user profile...');
+      const profileResponse = await this.get('/profile');
+      
+      if (profileResponse && profileResponse.data && profileResponse.data.data) {
+        console.log('User profile fetched successfully');
+        return profileResponse.data.data;
+      } else {
+        console.log('Failed to fetch user profile');
+        return null;
+      }
+    } catch (error) {
+      console.log('❌ Session restore error:', error);
+      return null;
+    }
   }
 }
 

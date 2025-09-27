@@ -26,6 +26,7 @@ interface UserContextType {
   isAuthenticated: boolean;
   isTokenExpired: () => boolean;
   isInitialized: boolean;
+  restoreUserData: (userData: User) => void;
 }
 
 // Create the context
@@ -94,37 +95,102 @@ export function UserProvider({ children }: UserProviderProps) {
       const storedUser = userStorage.load();
       const storedToken = localStorage.getItem('userToken');
       
-      if (storedUser && storedToken) {
-        // Check if stored user session is still valid
+      if (storedUser) {
+        // We have user data - check if it's still valid
         if (storedUser.expiry && new Date() > storedUser.expiry) {
-          // Session expired, clear all storage
+          // User session has expired completely, clear everything
           userStorage.clear();
           localStorage.removeItem('userToken');
           setUser(null);
         } else {
-          // Valid session, restore user
-          setUser(storedUser);
+          // User session is still valid, restore user
+          const userWithLogin = { ...storedUser, login: true };
+          setUser(userWithLogin);
+          userStorage.save(userWithLogin);
+          console.log('User data restored to localStorage on page load');
         }
-      } else if (storedUser && !storedToken) {
-        // User data exists but no token - invalid state, clear user data
-        userStorage.clear();
-        setUser(null);
-      } else if (!storedUser && storedToken) {
+        // Set initialized immediately when we have stored user data
+        setIsInitialized(true);
+      } else if (storedToken) {
         // Token exists but no user data - invalid state, clear token
         localStorage.removeItem('userToken');
         setUser(null);
+        setIsInitialized(true);
+      } else {
+        // No user data and no token - check if we have any cookies that indicate a session
+        // This handles cases where localStorage was cleared but HTTP-only cookies remain
+        const hasRefreshTokenCookie = document.cookie.includes('refreshToken=');
+        if (hasRefreshTokenCookie) {
+          console.log('🍪 Refresh token cookie found but no local user data - attempting session restore');
+          
+          // Attempt to restore the session proactively
+          try {
+            // Import apiService dynamically to avoid circular dependency
+            const { apiService } = await import('@/hooks/apiService');
+            const userData = await apiService.attemptSessionRestore();
+            
+            if (userData) {
+              const restoredUser = {
+                id: userData.id,
+                firstName: userData.firstName || '',
+                lastName: userData.lastName || '',
+                username: userData.username || '',
+                email: userData.email || '',
+                avatarUrl: userData.avatarUrl,
+                login: true,
+                expiry: undefined, // Will be set from token expiry
+                role: userData.roles?.[0] || 'user',
+                preferences: userData.preferences
+              };
+              
+              setUser(restoredUser);
+              userStorage.save(restoredUser);
+              console.log('✅ Session restored successfully from cookies');
+            } else {
+              console.log('Session restoration failed');
+              setUser(null);
+            }
+          } catch (error) {
+            console.log('Error during session restoration:', error);
+            setUser(null);
+          }
+        } else {
+          // No refresh token cookie, definitely not authenticated
+          setUser(null);
+        }
+        
+        // CRITICAL: Only set initialized AFTER session restoration completes
+        setIsInitialized(true);
       }
-      
-      setIsInitialized(true);
     };
 
     initializeUser();
   }, []);
 
+  // Listen for automatic session restoration events
+  useEffect(() => {
+    const handleSessionRestored = (event: CustomEvent) => {
+      const restoredUser = event.detail;
+      if (restoredUser && !user) {
+        console.log('User session restored via event:', restoredUser.username || restoredUser.email);
+        setUser(restoredUser);
+      }
+    };
+
+    window.addEventListener('userSessionRestored', handleSessionRestored as EventListener);
+    
+    return () => {
+      window.removeEventListener('userSessionRestored', handleSessionRestored as EventListener);
+    };
+  }, [user]);
+
   // Custom setUser that also persists to localStorage
   const setUserWithPersistence = useCallback((newUser: User | null) => {
     setUser(newUser);
     userStorage.save(newUser);
+    if (newUser) {
+      console.log(' User data set and persisted to localStorage:', newUser.username || newUser.email);
+    }
   }, []);
 
   // Update user with partial data
@@ -157,6 +223,14 @@ export function UserProvider({ children }: UserProviderProps) {
     return new Date() > user.expiry;
   }, [user?.expiry]);
 
+  // Restore user data to localStorage (useful when localStorage was cleared but session is valid)
+  const restoreUserData = useCallback((userData: User) => {
+    const userWithLogin = { ...userData, login: true };
+    setUser(userWithLogin);
+    userStorage.save(userWithLogin);
+    console.log(' User data manually restored to localStorage');
+  }, []);
+
   const contextValue: UserContextType = {
     user,
     setUser: setUserWithPersistence,
@@ -165,6 +239,7 @@ export function UserProvider({ children }: UserProviderProps) {
     isAuthenticated,
     isTokenExpired,
     isInitialized,
+    restoreUserData,
   };
 
   // Show loading state while initializing to prevent content flash
@@ -242,11 +317,25 @@ export const userHelpers = {
     return new Date() < user.expiry;
   },
 
-  // Check if both user and token are present
+  // Check if user session is valid (token might be refreshed automatically)
   hasValidAuthState: (): boolean => {
     if (typeof window === 'undefined') return false;
     const storedUser = userStorage.load();
-    const storedToken = localStorage.getItem('userToken');
-    return !!(storedUser && storedToken && userHelpers.isSessionValid(storedUser));
+    // Focus on user session validity rather than requiring both user and token
+    // Token can be refreshed automatically if refresh token is valid
+    return !!(storedUser && userHelpers.isSessionValid(storedUser));
+  },
+
+  // Ensure user data is always in localStorage if we have a valid session
+  ensureUserDataInStorage: (userData?: User): void => {
+    if (typeof window === 'undefined') return;
+    
+    const storedUser = userStorage.load();
+    if (!storedUser && userData && userHelpers.isSessionValid(userData)) {
+      // User data is missing from localStorage but we have valid user data
+      const userWithLogin = { ...userData, login: true };
+      userStorage.save(userWithLogin);
+      console.log(' User data automatically restored to localStorage');
+    }
   }
 };

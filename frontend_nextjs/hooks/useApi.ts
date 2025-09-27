@@ -163,6 +163,7 @@ export function useApi() {
   const hasToken = useCallback(() => apiService.hasToken(), []);
   const hasRefreshToken = useCallback(() => apiService.hasRefreshToken(), []);
   const getTokensDebug = useCallback(() => apiService.getTokensDebug(), []);
+  const attemptSessionRestore = useCallback(() => apiService.attemptSessionRestore(), []);
 
   return {
     get,
@@ -176,5 +177,6 @@ export function useApi() {
     hasToken,
     hasRefreshToken,
     getTokensDebug,
+    attemptSessionRestore,
   };
 }
