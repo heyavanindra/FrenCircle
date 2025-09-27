@@ -50,7 +50,7 @@ export default function LinksPage() {
             <CardContent>
               <div className="py-12 text-center text-muted-foreground">
                 <p className="text-lg font-semibold mb-2">All your links</p>
-                <p className="text-sm">You haven't added any links yet. Use the button below to create your first link.</p>
+                <p className="text-sm">You haven&apos;t added any links yet. Use the button below to create your first link.</p>
                 <div className="mt-6">
                   <Button variant="outline">Create Link</Button>
                 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { easeOut, motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -74,7 +74,11 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
 const fadeIn = {
   hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+   visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: easeOut }, // ⟵ use easing function
+  },
 };
 
 export default function DocsPage() {
