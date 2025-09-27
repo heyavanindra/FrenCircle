@@ -52,6 +52,9 @@ builder.Services.Configure<FrenCircle.Infra.Configuration.SmtpSettings>(
     builder.Configuration.GetSection("Email:Smtp"));
 builder.Services.AddScoped<FrenCircle.Infra.IEmailService, FrenCircle.Infra.EmailService>();
 
+// Repository Services
+builder.Services.AddScoped<FrenCircle.Contracts.Interfaces.IUserRepository, FrenCircle.Repositories.UserRepository>();
+
 // Add custom app services (example)
 // builder.Services.AddSingleton<ILoggingService, LoggingService>();
 
