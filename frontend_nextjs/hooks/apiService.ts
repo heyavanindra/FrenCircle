@@ -6,7 +6,7 @@ import { ApiConfig, ApiResponse, ApiError, RequestConfig, RefreshTokenResponse }
 // when environment variables were not set at build/runtime.
 const DEFAULT_CONFIG: ApiConfig = {
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com',
-  timeout: 5000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },

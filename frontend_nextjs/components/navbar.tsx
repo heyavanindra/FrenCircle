@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, LogOut, User, Sun, Moon, Settings, UserCircle, BarChart3, Layout, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +12,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet";
 import {
   DropdownMenu,
@@ -19,21 +22,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUser, userHelpers } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { toast } from "sonner";
 import { navigationLinks } from "@/data/ui/navigationLinks";
 import Link from "next/link";
-
-
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useUser();
   const { theme, toggleTheme } = useTheme();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
 
-  const handleLoginClick = () => {
-    // Navigation is now handled by Link components
-  };
+  // Close the sheet on route change for good UX
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -76,7 +81,7 @@ export default function Navbar() {
                 <Sun className="h-4 w-4" />
               )}
             </Button>
-            
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -93,9 +98,9 @@ export default function Navbar() {
                       <p className="text-sm font-medium leading-none">
                         {userHelpers.getFirstName(user)}
                       </p>
-                      <p className="text-xs leading-none text-muted-foreground">
+                      {/* <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
-                      </p>
+                      </p> */}
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -112,9 +117,9 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/account/settings" className="cursor-pointer">
+                    <Link href="/account/preferences" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
-                      Settings
+                      Preferences
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -148,131 +153,158 @@ export default function Navbar() {
 
           {/* Mobile menu button */}
           <div className="md:hidden">
-            <Sheet>
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="Open menu">
+                <Button variant="outline" size="icon" aria-label="Open menu" aria-controls="mobile-menu">
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px]">
-                <SheetHeader>
-                  <SheetTitle>FrenCircle</SheetTitle>
-                  <SheetDescription>
-                    Navigate through the app
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="mt-6 flex flex-col space-y-3">
-                  {/* User section in mobile menu */}
-                  {isAuthenticated ? (
-                    <div className="flex items-center space-x-3 border-b pb-3">
-                      <Avatar>
-                        <AvatarImage src={userHelpers.getAvatarUrl(user)} alt="User Avatar" />
-                        <AvatarFallback>{userHelpers.getInitials(user)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{userHelpers.getFirstName(user)}</p>
-                        <p className="text-xs text-muted-foreground">{user?.email}</p>
-                        <p className="text-xs text-muted-foreground">@{user?.username}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="border-b pb-3">
-                      <Link href="/account/login" className="block">
-                        <Button variant="default" size="sm" className="w-full">
-                          <User className="h-3 w-3 mr-1" />
-                          Login
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                  
-                  {/* Navigation links in mobile menu */}
-                  {navigationLinks.map((link) => (
-                    <Link
-                      key={link.name}
-                      href={link.href}
-                      className="block rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
-                  
-                  {/* User menu items in mobile (only show if authenticated) */}
-                  {isAuthenticated && (
-                    <>
-                      <div className="border-t pt-3 mt-3">
-                        <Link
-                          href="/account/profile"
-                          className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
-                        >
-                          <UserCircle className="h-4 w-4 mr-2" />
-                          Profile
-                        </Link>
-                        <Link
-                          href="/account/insights"
-                          className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
-                        >
-                          <BarChart3 className="h-4 w-4 mr-2" />
-                          Insights
-                        </Link>
-                        <Link
-                          href="/account/settings"
-                          className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
-                        </Link>
-                        <div className="border-t pt-3 mt-3 space-y-1">
-                          <div className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground opacity-50">
-                            <Layout className="h-4 w-4 mr-2" />
-                            Dashboard
-                            <span className="ml-auto text-xs">Soon</span>
-                          </div>
-                          <Link
-                            href="/account/security"
-                            className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
-                          >
-                            <Shield className="h-4 w-4 mr-2" />
-                            Security
-                          </Link>
+              <SheetContent side="right" className="w-[88vw] max-w-sm p-0" id="mobile-menu">
+                <div className="p-5 border-b">
+                  <SheetHeader>
+                    <SheetTitle className="text-lg">FrenCircle</SheetTitle>
+                    <SheetDescription>Navigate through the app</SheetDescription>
+                  </SheetHeader>
+                </div>
+
+                {/* Scrollable content area to avoid viewport overflow */}
+                <ScrollArea className="h-[calc(100vh-5rem)]">
+                  <div className="p-5 space-y-4">
+                    {/* User section in mobile menu */}
+                    {isAuthenticated ? (
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user?.avatarUrl || userHelpers.getAvatarUrl?.(user)} alt="User Avatar" />
+                          <AvatarFallback>{userHelpers.getInitials(user)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{userHelpers.getFirstName(user)}</p>
+                          {/* <p className="text-xs text-muted-foreground truncate">{user?.email}</p> */}
+                          {user?.username && (
+                            <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                          )}
                         </div>
                       </div>
-                    </>
-                  )}
-                  
-                  {/* Theme Toggle in Mobile Menu */}
-                  <Button
-                    variant="ghost"
-                    onClick={toggleTheme}
-                    className="w-full justify-start"
-                    aria-label="Toggle theme"
-                  >
-                    {theme === "light" ? (
-                      <>
-                        <Moon className="h-4 w-4 mr-2" />
-                        Dark Mode
-                      </>
                     ) : (
+                      <div>
+                        <SheetClose asChild>
+                          <Link href="/account/login" className="block">
+                            <Button variant="default" size="sm" className="w-full">
+                              <User className="h-3 w-3 mr-1" />
+                              Login
+                            </Button>
+                          </Link>
+                        </SheetClose>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    {/* Navigation links in mobile menu */}
+                    <div className="space-y-1">
+                      {navigationLinks.map((link) => (
+                        <SheetClose asChild key={link.name}>
+                          <Link
+                            href={link.href}
+                            className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                          >
+                            {link.name}
+                          </Link>
+                        </SheetClose>
+                      ))}
+                    </div>
+
+                    {isAuthenticated && (
                       <>
-                        <Sun className="h-4 w-4 mr-2" />
-                        Light Mode
+                        <Separator />
+                        {/* User menu items in mobile (only show if authenticated) */}
+                        <div className="space-y-1">
+                          <SheetClose asChild>
+                            <Link
+                              href="/account/profile"
+                              className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                            >
+                              <UserCircle className="h-4 w-4 mr-2" />
+                              Profile
+                            </Link>
+                          </SheetClose>
+                          <SheetClose asChild>
+                            <Link
+                              href="/account/insights"
+                              className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                            >
+                              <BarChart3 className="h-4 w-4 mr-2" />
+                              Insights
+                            </Link>
+                          </SheetClose>
+                          <SheetClose asChild>
+                            <Link
+                              href="/account/settings"
+                              className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              Settings
+                            </Link>
+                          </SheetClose>
+
+                          <div className="border-t pt-3 mt-3 space-y-1">
+                            <div className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground opacity-50">
+                              <Layout className="h-4 w-4 mr-2" />
+                              Dashboard
+                              <span className="ml-auto text-xs">Soon</span>
+                            </div>
+                            <SheetClose asChild>
+                              <Link
+                                href="/account/security"
+                                className="flex items-center rounded-md px-3 py-2 text-base font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                              >
+                                <Shield className="h-4 w-4 mr-2" />
+                                Security
+                              </Link>
+                            </SheetClose>
+                          </div>
+                        </div>
                       </>
                     )}
-                  </Button>
-                  
-                  {/* Logout button in mobile menu */}
-                  {isAuthenticated && (
+
+                    <Separator />
+
+                    {/* Theme Toggle in Mobile Menu */}
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={logout}
-                      className="w-full justify-start mt-3 text-red-600 hover:text-red-700"
+                      variant="ghost"
+                      onClick={toggleTheme}
+                      className="w-full justify-start"
+                      aria-label="Toggle theme"
                     >
-                      <LogOut className="h-3 w-3 mr-2" />
-                      Logout
+                      {theme === "light" ? (
+                        <>
+                          <Moon className="h-4 w-4 mr-2" />
+                          Dark Mode
+                        </>
+                      ) : (
+                        <>
+                          <Sun className="h-4 w-4 mr-2" />
+                          Light Mode
+                        </>
+                      )}
                     </Button>
-                  )}
-                </div>
+
+                    {/* Logout button in mobile menu */}
+                    {isAuthenticated && (
+                      <SheetClose asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={logout}
+                          className="w-full justify-start mt-3 text-red-600 hover:text-red-700"
+                        >
+                          <LogOut className="h-3 w-3 mr-2" />
+                          Logout
+                        </Button>
+                      </SheetClose>
+                    )}
+                  </div>
+                </ScrollArea>
               </SheetContent>
             </Sheet>
           </div>

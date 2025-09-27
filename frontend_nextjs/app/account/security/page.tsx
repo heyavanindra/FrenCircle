@@ -28,6 +28,7 @@ import {
   LogOut,
   AlertTriangle,
   Trash2,
+  Download,
   RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
@@ -80,6 +81,7 @@ export default function SecurityPage() {
     newPassword: "",
     confirmPassword: ""
   });
+  const [showSessionsModal, setShowSessionsModal] = useState(false);
 
   // API hooks
   const { data: sessionsData, loading: sessionsLoading, refetch: refetchSessions } = useGet<GetSessionsResponse>("/profile/sessions");
@@ -315,6 +317,14 @@ export default function SecurityPage() {
         toast.error("Failed to logout other sessions. Please try again.");
       }
     }
+  };
+
+  const handleExportData = () => {
+    toast.info("Data export will be available soon!");
+  };
+
+  const handleDeleteAccount = () => {
+    toast.error("Account deletion will be available soon!");
   };
 
   const getDeviceIcon = (userAgent: string) => {
@@ -669,113 +679,72 @@ export default function SecurityPage() {
             </Card>
           </motion.div>
 
-          {/* Session Management Card */}
+          {/* Session Management: simplified - open modal to view/manage sessions */}
           <motion.div variants={itemVariants}>
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Globe className="h-5 w-5 mr-2" />
-                    Active Sessions
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={refetchSessions}
-                      disabled={sessionsLoading}
-                    >
-                      <RefreshCw className={`h-4 w-4 ${sessionsLoading ? 'animate-spin' : ''}`} />
-                    </Button>
-                    {sessionsData?.data.sessions && sessionsData.data.sessions.length > 1 && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleLogoutAllOtherSessionsClick}
-                        disabled={isLoggingOutAll}
-                      >
-                        {isLoggingOutAll ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                        ) : (
-                          <LogOut className="h-4 w-4 mr-2" />
-                        )}
-                        Logout All Others
-                      </Button>
-                    )}
-                  </div>
+               <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Lock className="h-5 w-5 mr-2" />
+                  Active Sessions
                 </CardTitle>
                 <CardDescription>
-                  Manage your active sessions across different devices
+                  Manage your active sessions
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                {sessionsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                    <span className="ml-2 text-muted-foreground">Loading sessions...</span>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">View Sessions</label>
+                    <p className="text-xs text-muted-foreground">Open modal to view and manage active sessions</p>
                   </div>
-                ) : sessionsData?.data.sessions && sessionsData.data.sessions.length > 0 ? (
-                  <div className="space-y-4">
-                    {sessionsData.data.sessions.map((session: SessionData) => (
-                      <div
-                        key={session.id}
-                        className={`p-4 rounded-lg border ${
-                          session.isCurrentSession ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="text-muted-foreground">
-                              {getDeviceIcon(session.userAgent)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium text-sm">
-                                  {session.userAgent.split(' ')[0]} Browser
-                                </p>
-                                {session.isCurrentSession && (
-                                  <Badge variant="default" className="text-xs">
-                                    Current Session
-                                  </Badge>
-                                )}
-                                <Badge variant="outline" className="text-xs">
-                                  {session.authMethod}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                IP: {session.ipAddress} • Last seen: {formatLastSeen(session.lastSeenAt)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Created: {new Date(session.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          {!session.isCurrentSession && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleLogoutSessionClick(session)}
-                              disabled={isLoggingOutSession}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <LogOut className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowSessionsModal(true)}>
+                     View Sessions
+                    </Button>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Globe className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No active sessions found</p>
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
 
           {/* Security Tips */}
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Data & Account</CardTitle>
+                <CardDescription>
+                  Manage your data and account settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Export Data</label>
+                    <p className="text-xs text-muted-foreground">Download your account data</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExportData}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-red-600">Delete Account</label>
+                    <p className="text-xs text-muted-foreground">Permanently delete your account</p>
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleDeleteAccount}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
@@ -935,6 +904,73 @@ export default function SecurityPage() {
                   </>
                 )}
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Sessions Modal - shows full sessions list and actions */}
+        <Dialog open={showSessionsModal} onOpenChange={setShowSessionsModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Globe className="h-5 w-5" />
+                  <span>Active Sessions</span>
+                </div>
+              </DialogTitle>
+              <DialogDescription>
+                Manage your active sessions across different devices. From here you can logout individual sessions or all other sessions.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-3">
+              {sessionsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              ) : sessionsData?.data.sessions && sessionsData.data.sessions.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {sessionsData.data.sessions.map((session: SessionData) => (
+                    <div key={session.id} className={`p-3 rounded-lg border ${session.isCurrentSession ? 'bg-primary/5 border-primary/20' : 'bg-muted/30'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="text-muted-foreground">{getDeviceIcon(session.userAgent)}</div>
+                          <div>
+                            <p className="font-medium text-sm">{session.userAgent.split(' ')[0]} Browser</p>
+                            <p className="text-xs text-muted-foreground">IP: {session.ipAddress}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="text-xs text-muted-foreground">{formatLastSeen(session.lastSeenAt)}</div>
+                          {!session.isCurrentSession ? (
+                            <Button size="sm" variant="outline" onClick={() => handleLogoutSessionClick(session)} disabled={isLoggingOutSession}>
+                              Logout
+                            </Button>
+                          ) : (
+                            <Badge variant="default">Current</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">No active sessions found</div>
+              )}
+            </div>
+            <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2">
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <Button variant="outline" size="sm" onClick={() => refetchSessions()} disabled={sessionsLoading}>
+                  <RefreshCw className={`h-4 w-4 ${sessionsLoading ? 'animate-spin' : ''}`} />
+                </Button>
+                {sessionsData?.data.sessions && sessionsData.data.sessions.length > 1 && (
+                  <Button variant="destructive" size="sm" onClick={handleLogoutAllOtherSessionsClick} disabled={isLoggingOutAll}>
+                    Logout All Others
+                  </Button>
+                )}
+              </div>
+              <div className="w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setShowSessionsModal(false)}>Close</Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

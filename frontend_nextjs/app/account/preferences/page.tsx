@@ -194,8 +194,8 @@ export default function SettingsPage() {
                   <span className="ml-2 text-xs text-muted-foreground">(Coming soon)</span>
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6" role="group" aria-disabled="false">
-                <div className="flex items-center justify-between opacity-50 pointer-events-none">
+              <CardContent className="space-y-6 opacity-50 pointer-events-none" role="group" aria-disabled="true">
+                <div className="flex items-center justify-between">
                   <div>
                     <label className="text-sm font-medium">Profile Visibility</label>
                     <p className="text-xs text-muted-foreground">Who can see your profile</p>
@@ -206,7 +206,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between opacity-50 pointer-events-none">
+                <div className="flex items-center justify-between">
                   <div>
                     <label className="text-sm font-medium">Two-Factor Authentication</label>
                     <p className="text-xs text-muted-foreground">Add an extra layer of security</p>
@@ -222,15 +222,13 @@ export default function SettingsPage() {
                     <label className="text-sm font-medium">Login Activity</label>
                     <p className="text-xs text-muted-foreground">View recent login sessions</p>
                   </div>
-                  <Link href="/account/security">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
-                  </Link>
+                  <Button variant="ghost" size="sm">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
                 </div>
 
-                <div className="flex items-center justify-between opacity-50 pointer-events-none">
+                <div className="flex items-center justify-between">
                   <div>
                     <label className="text-sm font-medium">Change Password</label>
                     <p className="text-xs text-muted-foreground">Update your account password</p>
