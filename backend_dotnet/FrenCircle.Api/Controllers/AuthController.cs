@@ -1357,7 +1357,7 @@ public sealed class AuthController : BaseApiController
         {
             HttpOnly = true,
             Secure = isHttps, // Only secure on HTTPS, allow HTTP for localhost development
-            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax, // None for HTTPS cross-origin, Lax for HTTP localhost
+            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.None, // None for HTTPS cross-origin, Lax for HTTP localhost (OVERRIDE with None for testing)
             Path = "/auth",
             MaxAge = maxAge
         };
