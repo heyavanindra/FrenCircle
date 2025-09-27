@@ -5,8 +5,8 @@ import { ApiConfig, ApiResponse, ApiError, RequestConfig, RefreshTokenResponse }
 // This prevents the frontend from silently calling an unexpected production URL
 // when environment variables were not set at build/runtime.
 const DEFAULT_CONFIG: ApiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
-  timeout: 50000,
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
   },
