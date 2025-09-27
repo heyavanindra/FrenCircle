@@ -30,26 +30,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Deploy nextjs service
+      - name: Deploy nextjs service (locked)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
-          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "
+          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "bash -lc '
             set -euo pipefail
-            cd '${REMOTE_DIR}'
+
+            LOCKFILE=\"${REMOTE_DIR}/.deploy.lock\"
+            exec 9>\"\$LOCKFILE\"
+            echo \"[nextjs] Waiting for exclusive lock: \$LOCKFILE\"
+            if ! flock -w 600 9; then
+              echo \"[nextjs] ERROR: Could not acquire deploy lock within 10 minutes.\" >&2
+              exit 1
+            fi
+            echo \"[nextjs] Lock acquired at \$(date -Is)\"
+            trap \"echo '[nextjs] Releasing lock'; flock -u 9\" EXIT
+
+            cd \"${REMOTE_DIR}\"
             git fetch --all --prune
             git checkout -f main || git switch -f main
             git reset --hard
             git clean -fd -e logs/
             git pull --ff-only
+
             DOCKER_BUILDKIT=1 docker compose -p frencircle up -d --build --remove-orphans nextjs
             docker compose -p frencircle ps
-          " || echo '[nextjs] Build or deploy failed'
+          '" || echo '[nextjs] Build or deploy failed'
 
-      - name: Show recent service logs
+      - name: Show recent service logs (shared lock)
         if: always()
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -57,5 +69,16 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
-          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" \
-            "cd '$REMOTE_DIR' && docker compose -p frencircle logs nextjs --since=5m || true"
+          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "bash -lc '
+            set -euo pipefail
+
+            LOCKFILE=\"${REMOTE_DIR}/.deploy.lock\"
+            exec 9>\"\$LOCKFILE\"
+            # Shared lock; wait up to 2 minutes to avoid clashing with an active deploy
+            if flock -s -w 120 9; then
+              cd \"${REMOTE_DIR}\"
+              docker compose -p frencircle logs nextjs --since=5m || true
+            else
+              echo \"[nextjs] Skipping logs: could not acquire shared lock within 2 minutes\" >&2
+            fi
+          '"
