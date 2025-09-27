@@ -22,21 +22,21 @@ namespace FrenCircle.Infra
         {
             try
             {
-                //using var client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port);
-                //client.EnableSsl = _smtpSettings.EnableSsl;
-                //client.UseDefaultCredentials = false;
-                //client.Credentials = new NetworkCredential(_smtpSettings.Username, _smtpSettings.Password);
+                using var client = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port);
+                client.EnableSsl = _smtpSettings.EnableSsl;
+                client.UseDefaultCredentials = false;
+                client.Credentials = new NetworkCredential(_smtpSettings.Username, _smtpSettings.Password);
 
-                //using var message = new MailMessage();
-                //message.From = new MailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName);
-                //message.To.Add(to);
-                //message.Subject = subject;
-                //message.Body = body;
-                //message.IsBodyHtml = isHtml;
-                //message.BodyEncoding = Encoding.UTF8;
-                //message.SubjectEncoding = Encoding.UTF8;
+                using var message = new MailMessage();
+                message.From = new MailAddress(_smtpSettings.FromEmail, _smtpSettings.FromName);
+                message.To.Add(to);
+                message.Subject = subject;
+                message.Body = body;
+                message.IsBodyHtml = isHtml;
+                message.BodyEncoding = Encoding.UTF8;
+                message.SubjectEncoding = Encoding.UTF8;
 
-                //await client.SendMailAsync(message);
+                await client.SendMailAsync(message);
                 _logger.LogInformation("Email sent successfully to {To} with subject: {Subject}", to, subject);
             }
             catch (Exception ex)

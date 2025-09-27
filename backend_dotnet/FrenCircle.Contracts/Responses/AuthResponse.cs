@@ -16,7 +16,8 @@ public sealed record UserInfo(
     string? LastName,
     string? AvatarUrl,
     DateTimeOffset CreatedAt,
-    IReadOnlyList<string> Roles
+    IReadOnlyList<string> Roles,
+    string? AuthMethod
 );
 
 public sealed record RefreshTokenResponse(

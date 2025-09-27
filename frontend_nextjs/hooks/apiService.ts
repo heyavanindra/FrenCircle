@@ -1,8 +1,11 @@
 import { ApiConfig, ApiResponse, ApiError, RequestConfig, RefreshTokenResponse } from './types';
 
 // Default configuration
+// Use NEXT_PUBLIC_API_URL when provided, otherwise fall back to a safe local default.
+// This prevents the frontend from silently calling an unexpected production URL
+// when environment variables were not set at build/runtime.
 const DEFAULT_CONFIG: ApiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
   timeout: 50000,
   headers: {
     'Content-Type': 'application/json',
@@ -17,6 +20,11 @@ class ApiService {
 
   constructor(config: Partial<ApiConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+
+    // Log the baseURL at runtime in the browser console for easier debugging
+    if (typeof window !== 'undefined') {
+      console.info('ApiService configured baseURL:', this.config.baseURL);
+    }
   }
 
   // Set auth error callback (to clear user context)

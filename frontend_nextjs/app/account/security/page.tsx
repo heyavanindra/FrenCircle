@@ -84,6 +84,7 @@ export default function SecurityPage() {
   // API hooks
   const { data: sessionsData, loading: sessionsLoading, refetch: refetchSessions } = useGet<GetSessionsResponse>("/profile/sessions");
   const { mutate: changePassword, loading: isChangingPassword } = usePost<ChangePasswordResponse>("/profile/password");
+  const { mutate: setPassword, loading: isSettingPassword } = usePost<any>("/auth/set-password");
   const { mutate: logoutSession, loading: isLoggingOutSession } = usePost<LogoutSessionResponse>("");
   const { mutate: logoutAllSessions, loading: isLoggingOutAll } = usePost<LogoutAllSessionsResponse>("/profile/sessions/logout-all");
 
@@ -100,7 +101,38 @@ export default function SecurityPage() {
 
   const isNewPasswordValid = passwordData.newPassword.length >= 8;
   const doPasswordsMatch = passwordData.newPassword === passwordData.confirmPassword && passwordData.confirmPassword !== "";
-  const isPasswordFormValid = passwordData.currentPassword.trim() && isNewPasswordValid && doPasswordsMatch;
+
+  // Determine the authMethod for the current session and map it to known providers.
+  // Backend returns a single authMethod string, e.g. "EmailPassword", "Google", "Apple", "GitHub".
+  // We'll map these explicitly and default to EmailPassword (conservative) if unknown.
+  const currentSessionAuthMethod = (sessionsData?.data?.sessions?.find(s => s.isCurrentSession)?.authMethod ?? "").toString();
+
+  const mapAuthProvider = (authMethodRaw: string) => {
+    const v = (authMethodRaw || '').toLowerCase();
+    if (!v) return 'emailpassword'; // default
+    // Exact checks first
+    if (v === 'emailpassword' || v === 'email_password' || v === 'email/password') return 'emailpassword';
+    if (v === 'google' || v.includes('google')) return 'google';
+    if (v === 'apple' || v.includes('apple')) return 'apple';
+    if (v === 'github' || v.includes('github')) return 'github';
+    // Fallback heuristics
+    if (v.includes('email') && v.includes('password')) return 'emailpassword';
+    if (v.includes('email')) return 'emailpassword';
+    if (v.includes('oauth') || v.includes('auth0')) return 'oauth';
+    return 'emailpassword';
+  };
+
+  const mappedProvider = mapAuthProvider(currentSessionAuthMethod);
+  const isEmailPassword = mappedProvider === 'emailpassword';
+  const isGoogle = mappedProvider === 'google';
+  const isApple = mappedProvider === 'apple';
+  const isGitHub = mappedProvider === 'github';
+
+  // If the auth method is EmailPassword we require the current password for changing it.
+  // Otherwise (Google, OAuth providers) we show a Set Password flow which does not require the current password.
+  const isPasswordFormValid = isEmailPassword
+    ? passwordData.currentPassword.trim() && isNewPasswordValid && doPasswordsMatch
+    : isNewPasswordValid && doPasswordsMatch;
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +182,50 @@ export default function SecurityPage() {
         toast.error(error.message);
       } else {
         toast.error("Failed to change password. Please try again.");
+      }
+    }
+  };
+
+  // New flow: Set password for Google-only accounts (no current password required)
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isNewPasswordValid) {
+      toast.error("New password does not meet requirements");
+      return;
+    }
+
+    if (!doPasswordsMatch) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    if (!user || !user.email) {
+      toast.error("User email not available");
+      return;
+    }
+
+    try {
+      const setReq = {
+        email: user.email,
+        newPassword: passwordData.newPassword
+      } as any;
+
+      const response = await setPassword(setReq);
+
+      if (response.status === 200) {
+        toast.success("Password set successfully!");
+        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+        refetchSessions();
+      }
+    } catch (error: any) {
+      console.error("Set password failed:", error);
+      if (error?.status && error?.data?.title) {
+        toast.error(error.data.title);
+      } else if (error?.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to set password. Please try again.");
       }
     }
   };
@@ -304,7 +380,7 @@ export default function SecurityPage() {
             </p>
           </motion.div>
 
-          {/* Password Change Card */}
+          {/* Password Change / Set Password Card */}
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
@@ -317,7 +393,131 @@ export default function SecurityPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleChangePassword} className="space-y-4">
+                { /* Determine whether to show Set Password (non-email) or Change Password (EmailPassword) */ }
+                {!isEmailPassword ? (
+                  <form onSubmit={handleSetPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        {isGoogle && 'Your account was created via Google sign-in. You can set a password to enable email/password sign in.'}
+                        {isApple && 'Your account was created via Apple sign-in. You can set a password to enable email/password sign in.'}
+                        {isGitHub && 'Your account was created via GitHub sign-in. You can set a password to enable email/password sign in.'}
+                        {!isGoogle && !isApple && !isGitHub && 'You can set a password to enable email/password sign in for your account.'}
+                      </p>
+                      <label htmlFor="newPassword" className="text-sm font-medium">
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="newPassword"
+                          name="newPassword"
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="Enter your new password"
+                          value={passwordData.newPassword}
+                          onChange={handlePasswordInputChange}
+                          className="pl-10 pr-10"
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Password Requirements */}
+                      {passwordData.newPassword && (
+                        <div className="space-y-1">
+                          {passwordRequirements.map((requirement, index) => (
+                            <div key={index} className="flex items-center text-xs">
+                              <Check 
+                                className={`h-3 w-3 mr-2 ${
+                                  requirement.met ? 'text-green-600' : 'text-muted-foreground'
+                                }`} 
+                              />
+                              <span className={requirement.met ? 'text-green-600' : 'text-muted-foreground'}>
+                                {requirement.text}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="confirmPassword" className="text-sm font-medium">
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm your new password"
+                          value={passwordData.confirmPassword}
+                          onChange={handlePasswordInputChange}
+                          className="pl-10 pr-10"
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Password Match Indicator */}
+                      {passwordData.confirmPassword && (
+                        <div className="flex items-center text-xs">
+                          <Check 
+                            className={`h-3 w-3 mr-2 ${
+                              doPasswordsMatch ? 'text-green-600' : 'text-red-600'
+                            }`} 
+                          />
+                          <span className={doPasswordsMatch ? 'text-green-600' : 'text-red-600'}>
+                            {doPasswordsMatch ? 'Passwords match' : 'Passwords do not match'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      disabled={!isNewPasswordValid || !doPasswordsMatch || isSettingPassword}
+                      className="w-full"
+                    >
+                      {isSettingPassword ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                          Setting Password...
+                        </div>
+                      ) : (
+                        <>
+                          <Lock className="h-4 w-4 mr-2" />
+                          Set Password
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleChangePassword} className="space-y-4">
                   <div className="space-y-2">
                     <label htmlFor="currentPassword" className="text-sm font-medium">
                       Current Password
@@ -464,6 +664,7 @@ export default function SecurityPage() {
                     )}
                   </Button>
                 </form>
+                )}
               </CardContent>
             </Card>
           </motion.div>

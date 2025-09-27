@@ -38,3 +38,9 @@ public sealed record VerifyEmailRequest(
 public sealed record ResendVerificationRequest(
     string Email
 );
+
+public sealed record SetPasswordRequest(
+    string Email,
+    string? CurrentPassword,
+    string NewPassword
+);

@@ -91,7 +91,7 @@ export default function Navbar() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {userHelpers.getFullName(user)}
+                        {userHelpers.getFirstName(user)}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
@@ -166,11 +166,11 @@ export default function Navbar() {
                   {isAuthenticated ? (
                     <div className="flex items-center space-x-3 border-b pb-3">
                       <Avatar>
-                        <AvatarImage src={user?.avatarUrl || "/placeholder-avatar.jpg"} alt="User Avatar" />
+                        <AvatarImage src={userHelpers.getAvatarUrl(user)} alt="User Avatar" />
                         <AvatarFallback>{userHelpers.getInitials(user)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{userHelpers.getFullName(user)}</p>
+                        <p className="text-sm font-medium">{userHelpers.getFirstName(user)}</p>
                         <p className="text-xs text-muted-foreground">{user?.email}</p>
                         <p className="text-xs text-muted-foreground">@{user?.username}</p>
                       </div>

@@ -13,18 +13,12 @@ namespace FrenCircle.Api.Controllers;
 
 [Route("profile")]
 [Authorize]
-public sealed class ProfileController : BaseApiController
+public sealed class ProfileController(
+    ILogger<ProfileController> logger,
+    FrenCircleDbContext context) : BaseApiController
 {
-    private readonly ILogger<ProfileController> _logger;
-    private readonly FrenCircleDbContext _context;
-
-    public ProfileController(
-        ILogger<ProfileController> logger, 
-        FrenCircleDbContext context)
-    {
-        _logger = logger;
-        _context = context;
-    }
+    private readonly ILogger<ProfileController> _logger = logger;
+    private readonly FrenCircleDbContext _context = context;
 
     /// <summary>
     /// Get current user's profile details
@@ -269,6 +263,7 @@ public sealed class ProfileController : BaseApiController
 
             // Revoke all existing refresh tokens to force re-login on other devices
             var refreshTokens = await _context.RefreshTokens
+                .AsNoTracking()
                 .Where(rt => rt.UserId == userIdGuid && rt.RevokedAt == null)
                 .ToListAsync(cancellationToken);
 
@@ -497,6 +492,7 @@ public sealed class ProfileController : BaseApiController
     /// Delete user account permanently (requires password confirmation)
     /// </summary>
     [HttpPost("delete")]
+    [Authorize(Roles = "admin")]
     [ProducesResponseType(typeof(ApiResponse<AccountDeleteResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -641,6 +637,7 @@ public sealed class ProfileController : BaseApiController
         {
             // Verify this session still exists and is active
             var sessionExists = await _context.Sessions
+                .AsNoTracking()
                 .AnyAsync(s => s.Id == sessionIdFromToken && s.UserId == userId && s.RevokedAt == null, cancellationToken);
             
             if (sessionExists)
@@ -654,6 +651,7 @@ public sealed class ProfileController : BaseApiController
             // Hash the refresh token value to compare with stored hashes
             var hashedToken = HashToken(refreshTokenValue);
             var refreshToken = await _context.RefreshTokens
+                .AsNoTracking()
                 .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.TokenHash == hashedToken)
                 .FirstOrDefaultAsync(cancellationToken);
             
@@ -666,6 +664,7 @@ public sealed class ProfileController : BaseApiController
         var currentUserAgent = Request.Headers.UserAgent.ToString() ?? "unknown";
         
         var matchingSession = await _context.Sessions
+            .AsNoTracking()
             .Where(s => s.UserId == userId && s.RevokedAt == null)
             .Where(s => s.IpAddress.ToString() == currentIp && s.UserAgent == currentUserAgent)
             .OrderByDescending(s => s.LastSeenAt)
@@ -676,6 +675,7 @@ public sealed class ProfileController : BaseApiController
 
         // Method 4: Fallback to most recent active session
         var recentSession = await _context.Sessions
+            .AsNoTracking()
             .Where(s => s.UserId == userId && s.RevokedAt == null)
             .OrderByDescending(s => s.LastSeenAt)
             .FirstOrDefaultAsync(cancellationToken);

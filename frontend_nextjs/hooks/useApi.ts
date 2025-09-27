@@ -145,7 +145,6 @@ export function useApi() {
   useEffect(() => {
     initializeAuthCallback(logout);
   }, [logout]);
-
   const get = useCallback(<T = any>(endpoint: string, config?: RequestConfig) => {
     return apiService.get<T>(endpoint, config);
   }, []);
@@ -154,17 +153,28 @@ export function useApi() {
     return apiService.post<T>(endpoint, data, config);
   }, []);
 
+  // Wrap apiService methods with stable callbacks so their identity doesn't change across renders
+  const setToken = useCallback((token: string) => apiService.setToken(token), []);
+  const setRefreshToken = useCallback((token: string) => apiService.setRefreshToken(token), []);
+  const setTokens = useCallback((accessToken: string, refreshToken: string) => apiService.setTokens(accessToken, refreshToken), []);
+  const clearToken = useCallback(() => apiService.clearToken(), []);
+  const clearRefreshToken = useCallback(() => apiService.clearRefreshToken(), []);
+  const clearAllTokens = useCallback(() => apiService.clearAllTokens(), []);
+  const hasToken = useCallback(() => apiService.hasToken(), []);
+  const hasRefreshToken = useCallback(() => apiService.hasRefreshToken(), []);
+  const getTokensDebug = useCallback(() => apiService.getTokensDebug(), []);
+
   return {
     get,
     post,
-    setToken: apiService.setToken.bind(apiService),
-    setRefreshToken: apiService.setRefreshToken.bind(apiService),
-    setTokens: apiService.setTokens.bind(apiService),
-    clearToken: apiService.clearToken.bind(apiService),
-    clearRefreshToken: apiService.clearRefreshToken.bind(apiService),
-    clearAllTokens: apiService.clearAllTokens.bind(apiService),
-    hasToken: apiService.hasToken.bind(apiService),
-    hasRefreshToken: apiService.hasRefreshToken.bind(apiService),
-    getTokensDebug: apiService.getTokensDebug.bind(apiService),
+    setToken,
+    setRefreshToken,
+    setTokens,
+    clearToken,
+    clearRefreshToken,
+    clearAllTokens,
+    hasToken,
+    hasRefreshToken,
+    getTokensDebug,
   };
 }

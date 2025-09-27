@@ -208,6 +208,26 @@ export const userHelpers = {
     if (!user) return 'Guest';
     return user.username || userHelpers.getFullName(user);
   },
+
+  // Return only the first name for UI sections that require it
+  getFirstName: (user: User | null): string => {
+    if (!user) return 'Guest';
+    if (user.firstName && user.firstName.trim().length > 0) return user.firstName;
+    // Fallback to username or full name initial
+    if (user.username) return user.username;
+    return userHelpers.getFullName(user).split(' ')[0] || 'Guest';
+  },
+
+  getLastName: (user: User | null): string => {
+    if (!user) return '';
+    return user.lastName || '';
+  },
+
+  // Safe avatar URL accessor with fallback
+  getAvatarUrl: (user: User | null): string => {
+    if (!user) return '/placeholder-avatar.jpg';
+    return user.avatarUrl || '/placeholder-avatar.jpg';
+  },
   
   getInitials: (user: User | null): string => {
     if (!user) return 'G';

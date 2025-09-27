@@ -128,17 +128,7 @@ public sealed class AuthController : BaseApiController
             var expiryMinutes = jwtExpiryMinutes ?? 15;
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
 
-            var userInfo = new UserInfo(
-                Id: user.Id,
-                Email: user.Email,
-                EmailVerified: user.EmailVerified,
-                Username: user.Username,
-                FirstName: user.FirstName,
-                LastName: user.LastName,
-                AvatarUrl: user.AvatarUrl,
-                CreatedAt: user.CreatedAt,
-                Roles: user.UserRoles.Select(ur => ur.Role.Name).ToList()
-            );
+            var userInfo = BuildUserInfo(user, authMethod: "EmailPassword");
 
             // Return refresh token in response for frontend compatibility
             var authResponse = new AuthResponse(
@@ -295,17 +285,7 @@ public sealed class AuthController : BaseApiController
                 // Continue without failing the registration - user can resend verification
             }
 
-            var userInfo = new UserInfo(
-                Id: user.Id,
-                Email: user.Email,
-                EmailVerified: user.EmailVerified,
-                Username: user.Username,
-                FirstName: user.FirstName,
-                LastName: user.LastName,
-                AvatarUrl: user.AvatarUrl,
-                CreatedAt: user.CreatedAt,
-                Roles: userRole != null ? [userRole.Name] : []
-            );
+            var userInfo = BuildUserInfo(user, userRole != null ? new[] { userRole.Name } : Array.Empty<string>());
 
             _logger.LogInformation("User {UserId} registered successfully", user.Id);
             
@@ -633,17 +613,34 @@ public sealed class AuthController : BaseApiController
             return UnauthorizedProblem("User not found");
         }
 
-        var userInfo = new UserInfo(
-            Id: user.Id,
-            Email: user.Email,
-            EmailVerified: user.EmailVerified,
-            Username: user.Username,
-            FirstName: user.FirstName,
-            LastName: user.LastName,
-            AvatarUrl: user.AvatarUrl,
-            CreatedAt: user.CreatedAt,
-            Roles: user.UserRoles.Select(ur => ur.Role.Name).ToList()
-        );
+        // Determine auth method from session or fallback to external login detection
+        string? authMethod = null;
+        
+        // Try to get session ID from JWT claims
+        var sessionClaim = User.FindFirst("session_id")?.Value ?? User.FindFirst("sid")?.Value;
+        if (!string.IsNullOrEmpty(sessionClaim) && Guid.TryParse(sessionClaim, out var sessionId))
+        {
+            var session = await _context.Sessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId, cancellationToken);
+            
+            if (session != null)
+            {
+                authMethod = session.AuthMethod;
+            }
+        }
+        
+        // Fallback: if no session found, check external logins
+        if (string.IsNullOrEmpty(authMethod))
+        {
+            var hasGoogleLogin = await _context.ExternalLogins
+                .AsNoTracking()
+                .AnyAsync(el => el.UserId == userId && el.Provider == "google", cancellationToken);
+            
+            authMethod = hasGoogleLogin ? "Google" : "EmailPassword";
+        }
+
+        var userInfo = BuildUserInfo(user, authMethod: authMethod);
 
         return OkEnvelope(userInfo);
     }
@@ -908,6 +905,79 @@ public sealed class AuthController : BaseApiController
     }
 
     /// <summary>
+    /// Set or change password. Google-only accounts can set password without current password.
+    /// Other accounts must provide current password.
+    /// </summary>
+    [HttpPost("set-password")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> SetPassword([FromBody] FrenCircle.Contracts.Requests.SetPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("SetPassword attempt for {Email} with CorrelationId {CorrelationId}", request.Email, CorrelationId);
+
+        try
+        {
+            var user = await _context.Users
+                .Include(u => u.ExternalLogins)
+                .FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+
+            if (user == null)
+            {
+                return BadRequestProblem("User not found");
+            }
+
+            // Determine if user is Google-only (has an external login for google)
+            var hasGoogleLogin = user.ExternalLogins.Any(el => el.Provider == "google");
+
+            if (!hasGoogleLogin)
+            {
+                // Non-Google accounts must provide current password
+                if (string.IsNullOrEmpty(request.CurrentPassword))
+                {
+                    return BadRequestProblem("Current password is required");
+                }
+
+                if (!VerifyPassword(request.CurrentPassword, user.PasswordHash))
+                {
+                    return UnauthorizedProblem("Current password is incorrect");
+                }
+            }
+
+            // Validate new password length using existing app config fallback
+            var minPasswordLength = _configuration.GetValue<int>("Auth:MinPasswordLength", 8);
+            if (request.NewPassword.Length < minPasswordLength)
+            {
+                return BadRequestProblem($"Password must be at least {minPasswordLength} characters long");
+            }
+
+            // Update password and revoke existing refresh tokens
+            user.PasswordHash = HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTimeOffset.UtcNow;
+
+            var refreshTokens = await _context.RefreshTokens
+                .Where(rt => rt.UserId == user.Id && !rt.RevokedAt.HasValue)
+                .ToListAsync(cancellationToken);
+
+            foreach (var rt in refreshTokens)
+            {
+                rt.RevokedAt = DateTimeOffset.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Password set/changed successfully for user {UserId}", user.Id);
+
+            return Ok(new ApiResponse<object>(new { message = "Password updated successfully" }));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during set password for {Email}", request.Email);
+            return Problem("An error occurred while setting password");
+        }
+    }
+
+    /// <summary>
     /// Initiate Google OAuth flow
     /// </summary>
     [HttpGet("google")]
@@ -1104,6 +1174,25 @@ public sealed class AuthController : BaseApiController
             return existingUser;
         }
 
+        // Parse display name into first and last name (if possible)
+        string parsedFirstName = googleUser.GivenName;
+        string parsedLastName = googleUser.FamilyName;
+        var fullName = (googleUser.Name ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(parsedFirstName) && !string.IsNullOrEmpty(fullName))
+        {
+            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1)
+            {
+                parsedFirstName = parts[0];
+                parsedLastName = string.Empty;
+            }
+            else if (parts.Length >= 2)
+            {
+                parsedFirstName = parts[0];
+                parsedLastName = parts[^1]; // last word as last name
+            }
+        }
+
         // Create new user
         var newUser = new User
         {
@@ -1112,10 +1201,10 @@ public sealed class AuthController : BaseApiController
             // Always treat Google signups as verified (Google verifies ownership)
             EmailVerified = true,
             PasswordHash = GenerateRandomHash(), // They won't use password login
-            FirstName = googleUser.GivenName,
-            LastName = googleUser.FamilyName,
-            Username = await GenerateUniqueUsername(googleUser.Name ?? googleUser.Email.Split('@')[0], cancellationToken),
-            DisplayName = googleUser.Name,
+            FirstName = parsedFirstName,
+            LastName = parsedLastName,
+            Username = await GenerateUniqueUsername(fullName != string.Empty ? fullName : googleUser.Email.Split('@')[0], cancellationToken),
+            DisplayName = string.IsNullOrEmpty(parsedFirstName) ? fullName : parsedFirstName,
             AvatarUrl = googleUser.Picture,
             IsActive = true,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -1194,17 +1283,7 @@ public sealed class AuthController : BaseApiController
         cookieOptions.Expires = refreshToken.ExpiresAt;
         Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
 
-        var userInfo = new UserInfo(
-            user.Id,
-            user.Email,
-            user.EmailVerified,
-            user.Username,
-            user.FirstName,
-            user.LastName,
-            user.AvatarUrl,
-            user.CreatedAt,
-            user.UserRoles.Select(ur => ur.Role.Name).ToArray()
-        );
+        var userInfo = BuildUserInfo(user, authMethod: authMethod);
 
         return new AuthResponse(accessToken, refreshTokenValue, DateTimeOffset.UtcNow.AddMinutes(15), userInfo);
     }
@@ -1233,6 +1312,36 @@ public sealed class AuthController : BaseApiController
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes);
+    }
+
+    // Helper to build a UserInfo response with safe fallbacks for username and names
+    private UserInfo BuildUserInfo(User user, IEnumerable<string>? rolesOverride = null, string? authMethod = null)
+    {
+        // Ensure username - if missing, generate a generic one: user + short id
+        var username = string.IsNullOrWhiteSpace(user.Username)
+            ? $"user{user.Id.ToString().Split('-')[0]}"
+            : user.Username;
+
+        // Default names to empty strings to avoid null in frontends
+        var firstName = user.FirstName ?? string.Empty;
+        var lastName = user.LastName ?? string.Empty;
+
+        var roles = rolesOverride != null
+            ? rolesOverride.ToArray()
+            : user.UserRoles?.Select(ur => ur.Role.Name).ToArray() ?? Array.Empty<string>();
+
+        return new UserInfo(
+            Id: user.Id,
+            Email: user.Email,
+            EmailVerified: user.EmailVerified,
+            Username: username,
+            FirstName: firstName,
+            LastName: lastName,
+            AvatarUrl: user.AvatarUrl,
+            CreatedAt: user.CreatedAt,
+            Roles: roles,
+            AuthMethod: authMethod
+        );
     }
 
     // Helper method for consistent cookie options

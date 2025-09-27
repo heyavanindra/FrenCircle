@@ -256,6 +256,20 @@ export interface ChangePasswordResponse {
   meta: any | null;
 }
 
+export interface SetPasswordRequest {
+  email: string;
+  currentPassword?: string | null;
+  newPassword: string;
+}
+
+export interface SetPasswordResponse {
+  data: {
+    message: string;
+    updatedAt: string;
+  };
+  meta: any | null;
+}
+
 // Session Management Types
 export interface SessionData {
   id: string;
