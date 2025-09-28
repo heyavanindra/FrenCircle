@@ -51,6 +51,8 @@ public class JwtService : IJwtService
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
+            IssuedAt = DateTime.UtcNow,
+            NotBefore = DateTime.UtcNow,
             Issuer = _jwtSettings.Issuer,
             Audience = _jwtSettings.Audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -59,7 +61,9 @@ public class JwtService : IJwtService
         var token = tokenHandler.CreateToken(tokenDescriptor);
         var tokenString = tokenHandler.WriteToken(token);
 
-        _logger.LogInformation("Generated JWT token for user {UserId} ({Username})", user.Id, user.Username);
+        _logger.LogInformation("Generated JWT token for user {UserId} ({Username}) - IssuedAt: {IssuedAt}, NotBefore: {NotBefore}, Expires: {Expires}", 
+            user.Id, user.Username, tokenDescriptor.IssuedAt, tokenDescriptor.NotBefore, tokenDescriptor.Expires);
+        
         return tokenString;
     }
 
@@ -79,7 +83,7 @@ public class JwtService : IJwtService
                 ValidateAudience = true,
                 ValidAudience = _jwtSettings.Audience,
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.FromMinutes(5) // Allow 5 minutes clock skew for token validation
             };
 
             var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);

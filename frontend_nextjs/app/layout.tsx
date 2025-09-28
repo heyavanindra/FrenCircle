@@ -5,6 +5,7 @@ import Navbar from "@/components/navbar";
 import { UserProvider } from "@/contexts/UserContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "@/components/ui/sonner";
+import { SessionChecker } from "@/components/SessionChecker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <ThemeProvider defaultTheme="light">
           <UserProvider>
+            <SessionChecker />
             <Navbar />
             <main>{children}</main>
             <Toaster />

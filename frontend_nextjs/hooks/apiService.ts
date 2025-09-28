@@ -6,7 +6,7 @@ import { ApiConfig, ApiResponse, ApiError, RequestConfig, RefreshTokenResponse }
 // when environment variables were not set at build/runtime.
 const DEFAULT_CONFIG: ApiConfig = {
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com',
-  timeout: 10000,
+  timeout: 100000, // 100 seconds
   headers: {
     'Content-Type': 'application/json',
   },
@@ -118,17 +118,23 @@ class ApiService {
     const url = this.buildUrl('/auth/refresh');
     
     console.log(' Attempting token refresh to:', url);
-    console.log(' Document cookies:', document.cookie);
     
-    // Check if refresh token cookie exists (it might be HTTP-only)
-    const hasRefreshTokenCookie = document.cookie.includes('refreshToken=');
-    console.log(' Refresh token cookie visible:', hasRefreshTokenCookie);
+    // Get refresh token from localStorage
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      console.log(' No refresh token found in localStorage');
+      throw new Error('No refresh token available');
+    }
     
     try {
       const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include', // Include cookies in the request
-        // No body or extra headers needed - refresh token is in HTTP-only cookie
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refreshToken: refreshToken
+        })
       });
 
       console.log(' Refresh response status:', response.status);
@@ -147,9 +153,10 @@ class ApiService {
       const data: RefreshTokenResponse = await response.json();
       console.log('Refresh successful');
       
-      // Store new access token only (refresh token is in HTTP-only cookie)
+      // Store both new access token and refresh token in localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('userToken', data.data.accessToken);
+        localStorage.setItem('refreshToken', data.data.refreshToken);
         
         // Update user expiry time in localStorage if user exists
         const existingUser = localStorage.getItem('frencircle_user');
@@ -174,8 +181,11 @@ class ApiService {
       return data.data.accessToken;
     } catch (error) {
       console.log('Token refresh error:', error);
-      // Clear access token on refresh failure (refresh token cookie will be handled by server)
+      // Clear both tokens on refresh failure
       this.clearToken();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('refreshToken');
+      }
       this.onAuthError?.();
       return null;
     }
@@ -316,6 +326,7 @@ class ApiService {
   clearToken(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userToken');
+      localStorage.removeItem('refreshToken');
     }
   }
 

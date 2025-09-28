@@ -115,13 +115,6 @@ public sealed class AuthController : BaseApiController
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            // Set refresh token as httpOnly cookie (secure storage)
-            var cookieOptions = CreateSecureCookieOptions(request.RememberMe
-                ? TimeSpan.FromDays(60)
-                : TimeSpan.FromDays(14));
-
-            Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
-
             // Generate JWT access token with session ID
             var accessToken = _jwtService.GenerateToken(user, session.Id);
             var jwtExpiryMinutes = _configuration.GetSection("JWT:ExpiryMinutes").Get<int?>();
@@ -311,24 +304,25 @@ public sealed class AuthController : BaseApiController
     }
 
     /// <summary>
-    /// Refresh access token using refresh token from httpOnly cookie
+    /// Refresh access token using refresh token from request body
     /// </summary>
-    [HttpGet("refresh")]
+    [HttpPost("refresh")]
     [ProducesResponseType(typeof(ApiResponse<RefreshTokenResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> RefreshToken(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Token refresh attempt with CorrelationId {CorrelationId}", CorrelationId);
 
         try
         {
-            // Read refresh token from httpOnly cookie
-            if (!Request.Cookies.TryGetValue("refreshToken", out var refreshTokenValue) ||
-                string.IsNullOrEmpty(refreshTokenValue))
+            // Read refresh token from request body
+            if (string.IsNullOrEmpty(request.RefreshToken))
             {
-                _logger.LogWarning("Refresh token cookie not found or empty");
+                _logger.LogWarning("Refresh token not provided in request body");
                 return UnauthorizedProblem("Refresh token not found");
             }
+
+            var refreshTokenValue = request.RefreshToken;
 
             var tokenHash = HashToken(refreshTokenValue);
 
@@ -387,11 +381,6 @@ public sealed class AuthController : BaseApiController
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            // Set new refresh token as httpOnly cookie (token rotation)
-            var cookieOptions = CreateSecureCookieOptions(TimeSpan.FromDays(14));
-
-            Response.Cookies.Append("refreshToken", newRefreshTokenValue, cookieOptions);
-
             // Generate new JWT access token with session ID
             var accessToken = _jwtService.GenerateToken(refreshToken.User, refreshToken.SessionId);
             var jwtExpiryMinutes = _configuration.GetSection("JWT:ExpiryMinutes").Get<int?>();
@@ -419,23 +408,22 @@ public sealed class AuthController : BaseApiController
     }
 
     /// <summary>
-    /// Logout user and revoke refresh token from httpOnly cookie
+    /// Logout user and revoke refresh token from request body
     /// </summary>
     [HttpPost("logout")]
     [ProducesResponseType(typeof(ApiResponse<LogoutResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Logout(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Logout attempt with CorrelationId {CorrelationId}", CorrelationId);
 
         try
         {
-            // Read refresh token from httpOnly cookie
-            if (Request.Cookies.TryGetValue("refreshToken", out var refreshTokenValue) &&
-                !string.IsNullOrEmpty(refreshTokenValue))
+            // Read refresh token from request body
+            if (!string.IsNullOrEmpty(request.RefreshToken))
             {
                 // Find and revoke refresh token
-                var tokenHash = HashToken(refreshTokenValue);
+                var tokenHash = HashToken(request.RefreshToken);
                 var refreshToken = await _context.RefreshTokens
                     .FirstOrDefaultAsync(rt => rt.TokenHash == tokenHash, cancellationToken);
 
@@ -447,10 +435,6 @@ public sealed class AuthController : BaseApiController
                     _logger.LogInformation("User {UserId} logged out successfully", refreshToken.UserId);
                 }
             }
-
-            // Clear the refresh token cookie
-            var deleteCookieOptions = CreateSecureCookieOptions();
-            Response.Cookies.Delete("refreshToken", deleteCookieOptions);
 
             var response = new LogoutResponse(
                 Message: "Logged out successfully",
@@ -1284,11 +1268,6 @@ public sealed class AuthController : BaseApiController
 
         // Generate JWT with session ID
         var accessToken = _jwtService.GenerateToken(user, session.Id);
-
-        // Set refresh token cookie
-        var cookieOptions = CreateSecureCookieOptions();
-        cookieOptions.Expires = refreshToken.ExpiresAt;
-        Response.Cookies.Append("refreshToken", refreshTokenValue, cookieOptions);
 
         var userInfo = BuildUserInfo(user, authMethod: authMethod);
 

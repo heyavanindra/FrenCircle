@@ -205,11 +205,27 @@ export function UserProvider({ children }: UserProviderProps) {
 
   // Logout function
   const logout = useCallback(() => {
+    // Optional: Call backend logout endpoint with refresh token
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      // Fire and forget - don't wait for response
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com'}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken })
+      }).catch(() => {
+        // Ignore errors - we're logging out anyway
+      });
+    }
+
     setUser(null);
     // Clear all stored data
     userStorage.clear();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userToken');
+      localStorage.removeItem('refreshToken');
       sessionStorage.removeItem('userSession');
     }
   }, []);
