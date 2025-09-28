@@ -22,6 +22,8 @@ public class FrenCircleDbContext : DbContext
     public DbSet<TwoFactorCode> TwoFactorCodes { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<RateLimitBucket> RateLimitBuckets { get; set; }
+    public DbSet<Link> Links { get; set; }
+    public DbSet<LinkGroup> LinkGroups { get; set; }
     public DbSet<AppConfig> AppConfigs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -43,6 +45,8 @@ public class FrenCircleDbContext : DbContext
         ConfigureTwoFactorCodeEntity(modelBuilder);
         ConfigureAuditLogEntity(modelBuilder);
         ConfigureRateLimitBucketEntity(modelBuilder);
+    ConfigureLinkEntity(modelBuilder);
+    ConfigureLinkGroupEntity(modelBuilder);
         ConfigureAppConfigEntity(modelBuilder);
 
         SeedRoles(modelBuilder);
@@ -240,6 +244,58 @@ public class FrenCircleDbContext : DbContext
 
         // Unique constraints
         entity.HasIndex(e => e.Key).IsUnique();
+    }
+
+    private void ConfigureLinkGroupEntity(ModelBuilder modelBuilder)
+    {
+      var entity = modelBuilder.Entity<LinkGroup>();
+
+      // Primary key
+      entity.HasKey(e => e.Id);
+
+      // Unique or searchable indexes
+      entity.HasIndex(e => e.Name);
+
+    // Index to support ordering of groups per user
+    entity.HasIndex(e => new { e.UserId, e.Sequence });
+
+    // Relationship to owner user
+    entity.HasOne(lg => lg.User)
+        .WithMany(u => u.LinkGroups)
+        .HasForeignKey(lg => lg.UserId)
+        .OnDelete(DeleteBehavior.SetNull);
+
+      // Relationships
+      entity.HasMany(lg => lg.Links)
+          .WithOne(l => l.Group)
+          .HasForeignKey(l => l.GroupId)
+          .OnDelete(DeleteBehavior.SetNull);
+    }
+
+    private void ConfigureLinkEntity(ModelBuilder modelBuilder)
+    {
+      var entity = modelBuilder.Entity<Link>();
+
+      // Primary key
+      entity.HasKey(e => e.Id);
+
+      // Indexes
+        entity.HasIndex(e => new { e.UserId });
+        entity.HasIndex(e => new { e.GroupId });
+        // Composite indexes to support ordering by Sequence within user/group
+        entity.HasIndex(e => new { e.UserId, e.Sequence });
+        entity.HasIndex(e => new { e.GroupId, e.Sequence });
+
+            // Relationships
+      entity.HasOne(l => l.User)
+          .WithMany(u => u.Links)
+          .HasForeignKey(l => l.UserId)
+          .OnDelete(DeleteBehavior.SetNull);
+
+      entity.HasOne(l => l.Group)
+          .WithMany(g => g.Links)
+          .HasForeignKey(l => l.GroupId)
+          .OnDelete(DeleteBehavior.SetNull);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)

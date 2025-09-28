@@ -317,3 +317,43 @@ export interface RefreshTokenResponse {
   };
   meta: any | null;
 }
+
+// Links & Groups Types
+export interface LinkItem {
+  id: string;
+  name: string;
+  url: string;
+  description?: string | null;
+  isActive: boolean;
+  sequence: number;
+  groupId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LinkGroup {
+  id: string;
+  name: string;
+  description?: string | null;
+  sequence: number;
+  isActive: boolean;
+  links: LinkItem[];
+}
+
+export interface GetGroupedLinksResponse {
+  data: {
+    groups: LinkGroup[];
+    ungrouped: LinkGroup; // server returns an "ungrouped" bucket with same shape
+  };
+  meta: any | null;
+}
+
+export interface CreateOrEditLinkRequest {
+  id?: string; // optional when creating
+  name: string;
+  url: string;
+  description?: string | null;
+  groupId?: string | null;
+  sequence?: number;
+  isActive?: boolean;
+}

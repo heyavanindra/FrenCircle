@@ -55,4 +55,6 @@ public class User
     public ICollection<TwoFactorMethod> TwoFactorMethods { get; set; } = new List<TwoFactorMethod>();
     public ICollection<TwoFactorCode> TwoFactorCodes { get; set; } = new List<TwoFactorCode>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+    public ICollection<Link> Links { get; set; } = new List<Link>();
+    public ICollection<LinkGroup> LinkGroups { get; set; } = new List<LinkGroup>();
 }
