@@ -53,7 +53,7 @@ export default function ProtectedRoute({ children, fallback }: ProtectedRoutePro
             };
             
             setUser(restoredUser);
-            console.log('✅ ProtectedRoute: Session restored successfully');
+            console.log(' ProtectedRoute: Session restored successfully');
           } else {
             console.log('❌ ProtectedRoute: Session restoration failed');
           }

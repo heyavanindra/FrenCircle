@@ -23,7 +23,7 @@ export function useSessionCheck() {
       try {
         // If we already have a valid user session, no need to check
         if (user?.login) {
-          console.log('✅ User session already active, skipping proactive session check');
+          console.log(' User session already active, skipping proactive session check');
           hasCheckedSession.current = true;
           return;
         }
@@ -35,20 +35,20 @@ export function useSessionCheck() {
         
         // If we have any form of authentication, make a request to trigger restoration
         if (hasToken || hasRefreshToken || hasRefreshTokenCookie) {
-          console.log('🔍 Proactive session check: Found auth indicators, making authenticated request');
+          console.log(' Proactive session check: Found auth indicators, making authenticated request');
           
           try {
             // Make an authenticated request - this will trigger token refresh if needed
             // The apiService interceptor will handle session restoration automatically
             await apiService.get('/auth/me');
-            console.log('✅ Proactive session check completed successfully');
+            console.log(' Proactive session check completed successfully');
           } catch (error) {
-            console.log('ℹ️ Proactive session check failed - user may not be authenticated');
+            console.log(' Proactive session check failed - user may not be authenticated');
             // This is expected if the user is not authenticated
             // The apiService will handle cleanup if tokens are invalid
           }
         } else {
-          console.log('ℹ️ No authentication indicators found, skipping proactive session check');
+          console.log(' No authentication indicators found, skipping proactive session check');
         }
       } catch (error) {
         console.error('Proactive session check error:', error);

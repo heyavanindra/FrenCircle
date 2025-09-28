@@ -145,7 +145,7 @@ export function UserProvider({ children }: UserProviderProps) {
               
               setUser(restoredUser);
               userStorage.save(restoredUser);
-              console.log('✅ Session restored successfully from cookies');
+              console.log(' Session restored successfully from cookies');
             } else {
               console.log('Session restoration failed');
               setUser(null);
