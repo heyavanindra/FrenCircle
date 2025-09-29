@@ -25,23 +25,10 @@ const services: ServiceBase[] = [
 ];
 
 // ---- Metadata (SSR) ----
-export const metadata = {
-  title: "FrenCircle — Server status",
-  description:
-    "Short, practical guidance to get started with the FrenCircle demo. Neutral tone, no bold claims.",
-  openGraph: {
-    title: "FrenCircle — Server status",
-    description:
-      "Short, practical guidance to get started with the FrenCircle demo.",
-    url: "https://frencircle.com/status",
-    siteName: "FrenCircle",
-    type: "website",
-  },
-  alternates: {
-    canonical: "https://frencircle.com/status",
-  },
-};
+import { createMetadata } from "@/app/lib/seo";
+import { statusMeta } from "@/data/seo/metadetails";
 
+export const metadata = createMetadata(statusMeta);
 
 async function checkServiceStatus(service: ServiceBase): Promise<ServiceStatus> {
   const controller = new AbortController();

@@ -30,7 +30,7 @@ interface ServiceBase {
 interface ServiceStatus extends ServiceBase {
   status: Status;
   responseTime: number | null;
-  lastChecked: string | null; // ISO string from SSR
+  lastChecked: string | null;
   error?: string;
 }
 

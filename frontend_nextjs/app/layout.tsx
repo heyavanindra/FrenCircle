@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FrenCircle",
+  title: { default: "FrenCircle", template: `%s • FrenCircle` },
   description: "All your links in one place.",
 };
 
