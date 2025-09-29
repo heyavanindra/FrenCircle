@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import {
@@ -42,6 +42,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUser, userHelpers } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { navigationLinks } from "@/data/ui/navigationLinks";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useUser();
@@ -96,8 +106,12 @@ export default function Navbar() {
   const isActive = (href: string) =>
     pathname === href || (href !== "/" && pathname?.startsWith(href + "/"));
 
+  const router = useRouter();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
   return (
-    <nav
+    <>
+      <nav
       className={[
         "sticky top-0 z-50 bg-transparent",
         "transition-transform duration-300 will-change-transform",
@@ -215,12 +229,14 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={logout}
-                    className="cursor-pointer text-red-600 focus:text-red-600"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
+                  <DropdownMenuItem>
+                    <button
+                      className="flex w-full items-center text-left text-red-600 focus:text-red-600"
+                      onClick={() => setShowLogoutDialog(true)}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -399,17 +415,24 @@ export default function Navbar() {
 
                     {/* Logout (mobile) */}
                     {isAuthenticated && (
-                      <SheetClose asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={logout}
-                          className="w-full justify-start mt-3 text-red-600 hover:text-red-700"
-                        >
-                          <LogOut className="h-3 w-3 mr-2" />
-                          Logout
-                        </Button>
-                      </SheetClose>
+                      <>
+                        <SheetClose asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start mt-3 text-red-600 hover:text-red-700"
+                            onClick={() => {
+                              // Close the sheet first, then open the modal dialog to avoid overlay/focus issues
+                              setMenuOpen(false);
+                              // Small timeout to allow sheet close animation to finish
+                              setTimeout(() => setShowLogoutDialog(true), 250);
+                            }}
+                          >
+                            <LogOut className="h-3 w-3 mr-2" />
+                            Logout
+                          </Button>
+                        </SheetClose>
+                      </>
                     )}
                   </div>
                 </ScrollArea>
@@ -419,5 +442,40 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+
+    {/* Top-level Logout Confirmation Dialog (modal, compact) */}
+    <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center">
+            <LogOut className="h-5 w-5 mr-2 text-red-600" />
+            Confirm Logout
+          </DialogTitle>
+          <DialogDescription>Are you sure you want to logout?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" className="mr-2">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              setShowLogoutDialog(false);
+              try {
+                // Support sync or async logout
+                await Promise.resolve(logout());
+              } finally {
+                router.push("/");
+              }
+            }}
+          >
+            Logout
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

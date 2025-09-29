@@ -22,7 +22,7 @@ interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   updateUser: (updates: Partial<User>) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isTokenExpired: () => boolean;
   isInitialized: boolean;
@@ -204,11 +204,11 @@ export function UserProvider({ children }: UserProviderProps) {
   }, []);
 
   // Logout function
-  const logout = useCallback(() => {
+  const logout = useCallback(async (): Promise<void> => {
     // Optional: Call backend logout endpoint with refresh token
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
     if (refreshToken) {
-      // Fire and forget - don't wait for response
+      // Fire-and-forget: kick off the request but don't await it so UI can continue
       fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com'}/auth/logout`, {
         method: 'POST',
         headers: {
@@ -220,14 +220,17 @@ export function UserProvider({ children }: UserProviderProps) {
       });
     }
 
+    // Clear local state/storage immediately
     setUser(null);
-    // Clear all stored data
     userStorage.clear();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userToken');
       localStorage.removeItem('refreshToken');
       sessionStorage.removeItem('userSession');
     }
+
+    // Return immediately; callers may await this resolved promise
+    return;
   }, []);
 
   // Check if user is authenticated

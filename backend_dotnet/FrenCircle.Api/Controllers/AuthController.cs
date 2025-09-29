@@ -424,7 +424,7 @@ public sealed class AuthController : BaseApiController
             {
                 // Find and revoke refresh token
                 var tokenHash = HashToken(request.RefreshToken);
-                var refreshToken = await _context.RefreshTokens
+                var refreshToken = await _context.RefreshTokens.AsNoTracking()
                     .FirstOrDefaultAsync(rt => rt.TokenHash == tokenHash, cancellationToken);
 
                 if (refreshToken != null)
