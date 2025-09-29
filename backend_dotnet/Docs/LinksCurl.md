@@ -213,3 +213,30 @@ curl -X POST "https://localhost:7001/link/{linkId}/edit" \
 ---
 
 If you'd like I can also add a short Postman collection or example responses for these POST endpoints.
+
+---
+
+## 🔁 Resequence links (POST-only)
+
+Move links between groups (or to ungrouped) and update their sequence values. Body is an array of objects with id, groupId (nullable), and sequence.
+
+```bash
+curl -X POST "https://localhost:7001/link/resequence" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: $(uuidgen)" \
+  -d '[
+    { "id": "006cf39a-4668-4ffa-87d4-2f7400bb5a9d", "groupId": "0f39efb7-5374-4ba5-a138-75a2ae9b0bb3", "sequence": 0 },
+    { "id": "c0f68268-4521-4147-8102-519aae1a019f", "groupId": null, "sequence": 0 },
+    { "id": "fde1d804-bc81-44c5-90b4-f7630a365d8e", "groupId": null, "sequence": 1 },
+    { "id": "158759b6-dec4-4e1a-b3cb-1bd806a07b16", "groupId": null, "sequence": 2 }
+  ]'
+```
+
+**Expected Response (200 OK)**
+```json
+{
+  "data": { "message": "Resequenced" },
+  "meta": null
+}
+```

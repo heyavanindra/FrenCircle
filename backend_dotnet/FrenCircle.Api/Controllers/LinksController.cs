@@ -2,6 +2,7 @@ using FrenCircle.Api.Data;
 using FrenCircle.Contracts.Requests;
 using FrenCircle.Contracts.Responses;
 using FrenCircle.Entities;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,8 @@ using FrenCircle.Contracts;
 
 namespace FrenCircle.Api.Controllers;
 
+// DTO for resequence payload
+public record ReSequenceItemRequest(Guid Id, Guid? GroupId, int Sequence);
 [Route("link")]
 [ApiController]
 [Authorize]
@@ -246,6 +249,90 @@ public class LinksController : BaseApiController
     /// <summary>
     /// Delete a link by id (only owner or admin) - POST-based delete to follow GET/POST-only policy
     /// </summary>
+    /// <summary>
+    /// Resequence links (and optionally move them between groups). POST-only.
+    /// Body: [{ "id": "...", "groupId": "...|null", "sequence": 0 }, ...]
+    /// </summary>
+    [HttpPost("resequence")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Resequence([FromBody] List<ReSequenceItemRequest> items, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Resequencing {Count} links for user {UserId} with CorrelationId {CorrelationId}", items?.Count ?? 0, UserId, CorrelationId);
+
+        try
+        {
+            if (!Guid.TryParse(UserId, out var userId))
+                return UnauthorizedProblem("Invalid user context");
+
+            if (items == null || items.Count == 0)
+                return BadRequestProblem("No items provided");
+
+            var ids = items.Select(i => i.Id).ToList();
+
+            var links = await _context.Links
+                .Where(l => ids.Contains(l.Id))
+                .ToListAsync(cancellationToken);
+
+            var missing = ids.Except(links.Select(l => l.Id)).ToList();
+            if (missing.Any())
+                return NotFoundProblem($"Links not found: {string.Join(',', missing)}");
+
+            var isAdmin = User.IsInRole("admin");
+
+            // Cache group lookups
+            var groupIdsToCheck = items.Where(i => i.GroupId.HasValue).Select(i => i.GroupId!.Value).Distinct().ToList();
+            var groups = new Dictionary<Guid, LinkGroup>();
+            if (groupIdsToCheck.Any())
+            {
+                var foundGroups = await _context.LinkGroups
+                    .Where(g => groupIdsToCheck.Contains(g.Id))
+                    .ToListAsync(cancellationToken);
+
+                groups = foundGroups.ToDictionary(g => g.Id);
+            }
+
+            foreach (var item in items)
+            {
+                var link = links.First(l => l.Id == item.Id);
+
+                // Permission: owner or admin
+                if (link.UserId != userId && !isAdmin)
+                    return ForbiddenProblem($"You do not have permission to modify link {link.Id}");
+
+                // If group provided, validate it (exists and belongs to user unless admin)
+                if (item.GroupId.HasValue)
+                {
+                    if (!groups.TryGetValue(item.GroupId.Value, out var group))
+                        return BadRequestProblem($"Specified group {item.GroupId} does not exist");
+
+                    if (group.UserId != userId && !isAdmin)
+                        return BadRequestProblem($"Specified group {item.GroupId} does not belong to you");
+
+                    link.GroupId = item.GroupId;
+                }
+                else
+                {
+                    // explicit null means ungroup
+                    link.GroupId = null;
+                }
+
+                link.Sequence = item.Sequence;
+                link.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return OkEnvelope(new { Message = "Resequenced" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resequencing links for user {UserId}", UserId);
+            return Problem(StatusCodes.Status500InternalServerError, "Internal Server Error", "An error occurred while resequencing links");
+        }
+    }
+
     [HttpPost("{id:guid}/delete")]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
