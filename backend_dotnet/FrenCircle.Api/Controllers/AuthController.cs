@@ -419,20 +419,72 @@ public sealed class AuthController : BaseApiController
 
         try
         {
-            // Read refresh token from request body
+            // If a refresh token is provided, revoke that token and its session (and related tokens)
             if (!string.IsNullOrEmpty(request.RefreshToken))
             {
-                // Find and revoke refresh token
                 var tokenHash = HashToken(request.RefreshToken);
-                var refreshToken = await _context.RefreshTokens.AsNoTracking()
+                var refreshToken = await _context.RefreshTokens
+                    .Include(rt => rt.Session)
+                    .Include(rt => rt.User)
                     .FirstOrDefaultAsync(rt => rt.TokenHash == tokenHash, cancellationToken);
 
                 if (refreshToken != null)
                 {
-                    refreshToken.RevokedAt = DateTimeOffset.UtcNow;
+                    var now = DateTimeOffset.UtcNow;
+
+                    // Revoke the provided refresh token
+                    refreshToken.RevokedAt = now;
+
+                    // Revoke the session if present
+                    if (refreshToken.Session != null && !refreshToken.Session.RevokedAt.HasValue)
+                    {
+                        refreshToken.Session.RevokedAt = now;
+                    }
+
+                    // Revoke any other refresh tokens tied to the same session
+                    if (refreshToken.SessionId != Guid.Empty)
+                    {
+                        var siblingTokens = await _context.RefreshTokens
+                            .Where(rt => rt.SessionId == refreshToken.SessionId && !rt.RevokedAt.HasValue)
+                            .ToListAsync(cancellationToken);
+
+                        foreach (var rt in siblingTokens)
+                        {
+                            rt.RevokedAt = now;
+                        }
+                    }
+
                     await _context.SaveChangesAsync(cancellationToken);
 
-                    _logger.LogInformation("User {UserId} logged out successfully", refreshToken.UserId);
+                    _logger.LogInformation("User {UserId} logged out and session revoked", refreshToken.UserId);
+                }
+            }
+            else
+            {
+                // No refresh token provided - attempt to revoke current session from JWT claim
+                var sessionClaim = User.FindFirst("session_id")?.Value ?? User.FindFirst("sid")?.Value;
+                if (!string.IsNullOrEmpty(sessionClaim) && Guid.TryParse(sessionClaim, out var sessionId))
+                {
+                    var session = await _context.Sessions
+                        .Include(s => s.RefreshTokens)
+                        .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
+
+                    if (session != null)
+                    {
+                        var now = DateTimeOffset.UtcNow;
+                        if (!session.RevokedAt.HasValue)
+                        {
+                            session.RevokedAt = now;
+                        }
+
+                        foreach (var rt in session.RefreshTokens.Where(r => !r.RevokedAt.HasValue))
+                        {
+                            rt.RevokedAt = now;
+                        }
+
+                        await _context.SaveChangesAsync(cancellationToken);
+                        _logger.LogInformation("Session {SessionId} revoked via logout", sessionId);
+                    }
                 }
             }
 
