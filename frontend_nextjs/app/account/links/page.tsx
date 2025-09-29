@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Globe } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useGet, usePost, useApi } from '@/hooks/useApi';
-import { apiService } from '@/hooks/apiService';
 import React, { useState, useEffect } from 'react';
 import { GetGroupedLinksResponse, LinkItem, CreateOrEditLinkRequest } from '@/hooks/types';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { Trash } from 'lucide-react';
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -21,7 +21,7 @@ const containerVariants = {
 
 export default function LinksPage() {
   const { user, isAuthenticated } = useUser();
-  const { get } = useApi();
+  const { get, post } = useApi();
 
   // Fetch grouped links
   const { data: groupedData, loading: loadingLinks, error: linksError, refetch: refetchLinks } = useGet<GetGroupedLinksResponse>('/link');
@@ -30,6 +30,11 @@ export default function LinksPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateOrEditLinkRequest>({ name: '', url: '', description: '', groupId: null, sequence: 0, isActive: true });
+
+  // Group management UI state
+  const [isManagingGroups, setIsManagingGroups] = useState(false);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [groupForm, setGroupForm] = useState<{ name: string; description?: string | null; sequence?: number }>({ name: '', description: '', sequence: 0 });
 
   useEffect(() => {
     if (linksError) {
@@ -68,10 +73,10 @@ export default function LinksPage() {
     try {
       // Use POST /link for create and POST /link/{id}/edit for edit
       if (editingLinkId) {
-        await apiService.post(`/link/${editingLinkId}/edit`, form as any);
+        await post(`/link/${editingLinkId}/edit`, form as any);
         toast.success('Link updated');
       } else {
-        await apiService.post('/link', form as any);
+        await post('/link', form as any);
         toast.success('Link created');
       }
 
@@ -80,6 +85,31 @@ export default function LinksPage() {
     } catch (err: any) {
       console.error('Save link failed', err);
       toast.error(err?.data?.title || err?.message || 'Failed to save link');
+    }
+  };
+
+  const createGroup = async () => {
+    try {
+      await post('/group', groupForm as any);
+      toast.success('Group created');
+      await refetchLinks();
+      setGroupForm({ name: '', description: '', sequence: 0 });
+      setIsCreatingGroup(false);
+    } catch (err: any) {
+      console.error('Create group failed', err);
+      toast.error(err?.data?.title || err?.message || 'Failed to create group');
+    }
+  };
+
+  const deleteGroup = async (groupId: string) => {
+    if (!confirm('Delete group? Links in the group will be moved to Ungrouped.')) return;
+    try {
+      await post(`/group/${groupId}/delete`, {});
+      toast.success('Group deleted');
+      await refetchLinks();
+    } catch (err: any) {
+      console.error('Delete group failed', err);
+      toast.error(err?.data?.title || err?.message || 'Failed to delete group');
     }
   };
 
@@ -133,6 +163,50 @@ export default function LinksPage() {
 
               {!loadingLinks && groupedData && (
                 <div className="space-y-6">
+                  {/* Groups manager toggle */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">Manage your link groups</div>
+                    <div>
+                      <Button size="sm" variant="ghost" onClick={() => setIsManagingGroups(v => !v)}>{isManagingGroups ? 'Hide' : 'Manage Groups'}</Button>
+                    </div>
+                  </div>
+
+                  {isManagingGroups && (
+                    <div className="border rounded-md p-4 bg-muted/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="font-semibold">Groups</div>
+                        <div>
+                          <Button size="sm" variant="outline" onClick={() => setIsCreatingGroup(v => !v)}>{isCreatingGroup ? 'Cancel' : 'Create Group'}</Button>
+                        </div>
+                      </div>
+
+                      {isCreatingGroup && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                          <Input placeholder="Group name" value={groupForm.name} onChange={(e) => setGroupForm(f => ({ ...f, name: e.target.value }))} />
+                          <Input placeholder="Description" value={groupForm.description ?? ''} onChange={(e) => setGroupForm(f => ({ ...f, description: e.target.value }))} />
+                          <Input placeholder="Sequence" value={String(groupForm.sequence ?? 0)} onChange={(e) => setGroupForm(f => ({ ...f, sequence: Number(e.target.value || 0) }))} />
+                          <div className="col-span-3 mt-2">
+                            <Button onClick={createGroup}>Create Group</Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        {groupedData.data.groups.map(g => (
+                          <div key={g.id} className="flex items-center justify-between bg-background p-2 rounded">
+                            <div>
+                              <div className="font-medium">{g.name}</div>
+                              {g.description && <div className="text-sm text-muted-foreground">{g.description}</div>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="ghost" onClick={() => startCreate(g.id)}>Add Link</Button>
+                              <Button size="sm" variant="destructive" onClick={() => deleteGroup(g.id)}><Trash className="h-4 w-4" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {groupedData.data.groups.map(group => (
                     <div key={group.id} className="border rounded-md p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -200,6 +274,15 @@ export default function LinksPage() {
                   </div>
                   <div className="mt-3">
                     <Input placeholder="Description" value={form.description ?? ''} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} />
+                  </div>
+                  <div className="mt-3">
+                    <label className="block text-sm mb-1">Group</label>
+                    <select value={form.groupId ?? 'ungrouped'} onChange={(e) => setForm(f => ({ ...f, groupId: e.target.value === 'ungrouped' ? null : e.target.value }))} className="w-full rounded border px-2 py-1">
+                      <option value="ungrouped">Ungrouped</option>
+                      {(groupedData?.data?.groups ?? []).map(g => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex gap-2 mt-3">
                     <Button onClick={saveLink}>{editingLinkId ? 'Save' : 'Create'}</Button>

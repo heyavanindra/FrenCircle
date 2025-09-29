@@ -202,7 +202,7 @@ export default function HomeClient() {
 
             <motion.div variants={item} className="flex flex-col sm:flex-row gap-3">
               <Button size="lg" className="text-base px-7">
-                <span className="inline-flex items-center">Try the demo <ArrowRight className="ml-2 h-5 w-5" /></span>
+                <Link className="inline-flex items-center" href={"/account/login"}>Join Now<ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="text-base px-7">
                 <Link href="/about" className="inline-flex items-center">Learn more</Link>
