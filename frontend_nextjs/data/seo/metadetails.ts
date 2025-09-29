@@ -27,9 +27,13 @@ export const aboutMeta = {
   description: "Learn more about FrenCircle",
   path: "/about",
 };
-export default {
+
+const metaDetails = {
   siteBase,
   status: statusMeta,
   docs: docsMeta,
 };
+
+
+export default metaDetails;
 

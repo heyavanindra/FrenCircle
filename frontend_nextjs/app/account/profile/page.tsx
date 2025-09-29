@@ -11,9 +11,9 @@ import Link from "next/link";
 import AccessDenied from "@/components/AccessDenied";
 import { ArrowLeft, Camera, User, Mail, Calendar, Shield, Edit, Save, X, Clock, Globe } from "lucide-react";
 import { toast } from "sonner";
-import { useUser, userHelpers } from "@/contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
 import { useGet, usePost } from "@/hooks/useApi";
-import { GetProfileResponse, UpdateProfileRequest, UpdateProfileResponse, ProfileData } from "@/hooks/types";
+import { GetProfileResponse, UpdateProfileRequest, UpdateProfileResponse } from "@/hooks/types";
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },

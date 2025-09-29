@@ -6,8 +6,6 @@ import { Chrome, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useApi } from "@/hooks/useApi";
 import { GoogleInitResponse } from "@/hooks/types";
-import { useUser } from "@/contexts/UserContext";
-import { useRouter } from "next/navigation";
 
 interface GoogleOAuthButtonProps {
   variant?: "default" | "outline" | "ghost" | "destructive" | "secondary" | "link";
@@ -26,8 +24,8 @@ export default function GoogleOAuthButton({
 }: GoogleOAuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { get } = useApi();
-  const { setUser } = useUser();
-  const router = useRouter();
+  //const { setUser } = useUser();
+  //const router = useRouter();
 
   const handleGoogleLogin = async () => {
     if (disabled || isLoading) return;

@@ -44,7 +44,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { navigationLinks } from "@/data/ui/navigationLinks";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,

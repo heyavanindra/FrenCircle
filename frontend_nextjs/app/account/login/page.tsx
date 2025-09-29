@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePost, useApi } from "@/hooks/useApi";
-import { LoginRequest, LoginResponse, LoginErrorResponse } from "@/hooks/types";
+import { LoginRequest, LoginResponse } from "@/hooks/types";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
 import GoogleOAuthButton from "@/components/GoogleOAuthButton";
@@ -47,8 +47,8 @@ export default function LoginPage() {
     password: ""
   });
   
-  // Hooks
-  const { mutate: login, loading: isLoading, error: loginError } = usePost<LoginResponse>("/auth/login");
+  // Hooks //nuked login error state
+  const { mutate: login, loading: isLoading } = usePost<LoginResponse>("/auth/login");
   const { setUser } = useUser();
   const { setTokens } = useApi();
   const router = useRouter();

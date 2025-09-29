@@ -44,6 +44,7 @@ export function useSessionCheck() {
             console.log(' Proactive session check completed successfully');
           } catch (error) {
             console.log(' Proactive session check failed - user may not be authenticated');
+            console.error(' Session check error:', error);
             // This is expected if the user is not authenticated
             // The apiService will handle cleanup if tokens are invalid
           }

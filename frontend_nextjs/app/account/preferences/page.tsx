@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
@@ -17,7 +16,6 @@ import {
   Smartphone,
   Eye,
   Lock,
-  EyeOff,
 } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -41,7 +39,7 @@ const itemVariants = {
 };
 
 export default function SettingsPage() {
-  const { user, isAuthenticated, logout } = useUser();
+  const { user, isAuthenticated } = useUser();
   const { theme, toggleTheme } = useTheme();
 
   if (!isAuthenticated || !user) {

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/useApi";
-import { SignupRequest, SignupResponse, SignupErrorResponse } from "@/hooks/types";
+import { SignupRequest, SignupResponse } from "@/hooks/types";
 import { useRouter } from "next/navigation";
 import GoogleOAuthButton from "@/components/GoogleOAuthButton";
 
@@ -59,8 +59,8 @@ export default function SignupPage() {
   });
   const [acceptTerms, setAcceptTerms] = useState(false);
   
-  // Hooks
-  const { mutate: signup, loading: isLoading, error: signupError } = usePost<SignupResponse>("/auth/register");
+  // Hooks nuked: , error: signupError
+  const { mutate: signup, loading: isLoading } = usePost<SignupResponse>("/auth/register");
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +128,7 @@ export default function SignupPage() {
       
       // Handle successful signup (status 200 or 201)
       if (response.status === 200 || response.status === 201) {
-        const { data } = response.data;
+        //const { data } = response.data;
         
         toast.success(`Account created successfully! Please check your email to verify your account.`);
         console.log("Signup response:", response.data);

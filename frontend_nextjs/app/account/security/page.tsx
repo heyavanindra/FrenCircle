@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,7 @@ export default function SecurityPage() {
   const [showSessionLogoutDialog, setShowSessionLogoutDialog] = useState(false);
   const [showLogoutAllDialog, setShowLogoutAllDialog] = useState(false);
   const [sessionToLogout, setSessionToLogout] = useState<SessionData | null>(null);
-  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
+  const [, setPasswordChangeSuccess] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -88,7 +88,7 @@ export default function SecurityPage() {
   const { data: sessionsData, loading: sessionsLoading, refetch: refetchSessions } = useGet<GetSessionsResponse>("/profile/sessions");
   const { mutate: changePassword, loading: isChangingPassword } = usePost<ChangePasswordResponse>("/profile/password");
   const { mutate: setPassword, loading: isSettingPassword } = usePost<any>("/auth/set-password");
-  const { mutate: logoutSession, loading: isLoggingOutSession } = usePost<LogoutSessionResponse>("");
+  const { loading: isLoggingOutSession } = usePost<LogoutSessionResponse>("");
   const { mutate: logoutAllSessions, loading: isLoggingOutAll } = usePost<LogoutAllSessionsResponse>("/profile/sessions/logout-all");
 
   const handlePasswordInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

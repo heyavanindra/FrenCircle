@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePost } from "@/hooks/useApi";
-import { ForgotPasswordRequest, ForgotPasswordResponse, VerifyEmailRequest, VerifyEmailResponse } from "@/hooks/types";
+import { ForgotPasswordRequest, ForgotPasswordResponse, VerifyEmailResponse } from "@/hooks/types";
 import { useRouter } from "next/navigation";
 
 const containerVariants = {
@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
   
   // Hooks
   const { mutate: forgotPassword, loading: isSendingEmail } = usePost<ForgotPasswordResponse>("/auth/forgot-password");
-  const { mutate: verifyCode, loading: isVerifying } = usePost<VerifyEmailResponse>("/auth/verify-email");
+  const { loading: isVerifying } = usePost<VerifyEmailResponse>("/auth/verify-email");
   const router = useRouter();
 
   const handleSendResetEmail = async (e: React.FormEvent) => {

@@ -206,7 +206,7 @@ export default function LinksPage() {
   const [localUngrouped, setLocalUngrouped] = useState<LinkItem[]>([]);
 
   // drag state
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [, setActiveId] = useState<string | null>(null);
   const activeItemRef = useRef<LinkItem | null>(null);
 
   useEffect(() => {
@@ -277,7 +277,7 @@ export default function LinksPage() {
     // If dropping onto a link, we’ll consider container from that link’s location.
     // If dropping onto an empty container, over.id will be the container id.
     const activeContainer = getContainerFromLinkId(activeIdStr);
-    let overContainer = allContainerIds.includes(overIdStr) ? overIdStr : getContainerFromLinkId(overIdStr);
+    const overContainer = allContainerIds.includes(overIdStr) ? overIdStr : getContainerFromLinkId(overIdStr);
 
     if (!activeContainer || !overContainer) return;
 
