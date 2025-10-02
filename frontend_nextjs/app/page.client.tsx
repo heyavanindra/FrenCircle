@@ -137,8 +137,8 @@ function DeviceMockup() {
                 {/* foot chips */}
                 <div className="flex flex-wrap gap-2 text-xs">
                   <Badge variant="secondary">Demo</Badge>
-                  <Badge variant="secondary">Neutral copy</Badge>
-                  <Badge variant="secondary">No bold claims</Badge>
+                  <Badge variant="secondary">Less chaos</Badge>
+                  <Badge variant="secondary">More Clicks</Badge>
                 </div>
               </div>
             </div>
@@ -185,14 +185,14 @@ export default function HomeClient() {
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <motion.div className="space-y-6" variants={item}>
             <Badge variant="secondary" className="text-sm px-3 py-1.5 inline-flex items-center">
-              <Sparkles className="h-4 w-4 mr-2" /> Demo • Neutral copy • No bold claims
+              <Link2 className="h-4 w-4 mr-2" /> Less Chaos • More Clicks
             </Badge>
 
             <motion.h1
               variants={item}
               className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight"
             >
-              Organize every link & CTA in one place.
+              Stop juggling links. Share one.
             </motion.h1>
 
             <motion.p variants={item} className="text-lg md:text-xl text-muted-foreground max-w-2xl">

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FrenCircle.Contracts;
+using System.Text.Json;
 
 namespace FrenCircle.Api.Controllers;
 
@@ -130,9 +131,17 @@ public class LinksController : BaseApiController
             // If GroupId provided, ensure group exists and is owned by the user
             if (request.GroupId.HasValue)
             {
-                var group = await _context.LinkGroups.FirstOrDefaultAsync(g => g.Id == request.GroupId.Value, cancellationToken);
-                if (group == null || group.UserId != userId)
-                    return BadRequestProblem("Specified group does not exist or does not belong to you");
+                // treat Guid.Empty as explicit ungroup
+                if (request.GroupId.Value == Guid.Empty)
+                {
+                    request = request with { GroupId = null };
+                }
+                else
+                {
+                    var group = await _context.LinkGroups.FirstOrDefaultAsync(g => g.Id == request.GroupId.Value, cancellationToken);
+                    if (group == null || group.UserId != userId)
+                        return BadRequestProblem("Specified group does not exist or does not belong to you");
+                }
             }
 
             var now = DateTimeOffset.UtcNow;
@@ -182,7 +191,7 @@ public class LinksController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> EditLink(Guid id, [FromBody] CreateLinkRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> EditLink(Guid id, [FromBody] JsonElement requestJson, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Editing link {LinkId} by user {UserId}", id, UserId);
 
@@ -190,13 +199,17 @@ public class LinksController : BaseApiController
         {
             if (!Guid.TryParse(UserId, out var userId))
                 return UnauthorizedProblem("Invalid user context");
-
             var link = await _context.Links.FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
             if (link == null) return NotFoundProblem("Link not found");
 
             var isOwner = link.UserId == userId;
             var isAdmin = User.IsInRole("admin");
             if (!isOwner && !isAdmin) return ForbiddenProblem("You do not have permission to edit this link");
+
+            // Deserialize into the request DTO for convenience, but keep the raw JSON to detect explicit nulls
+            var request = JsonSerializer.Deserialize<CreateLinkRequest>(requestJson.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (request == null)
+                return BadRequestProblem("Invalid request payload");
 
             if (!string.IsNullOrWhiteSpace(request.Name)) link.Name = request.Name.Trim();
             if (!string.IsNullOrWhiteSpace(request.Url))
@@ -208,14 +221,48 @@ public class LinksController : BaseApiController
 
             if (request.Description != null) link.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
 
-            // If GroupId provided, ensure group exists and belongs to user (unless admin)
-            if (request.GroupId.HasValue)
+            // Handle group updates specially: we want to allow an explicit null to ungroup.
+            // Check whether the incoming JSON contains the "groupId" property.
+            if (requestJson.TryGetProperty("groupId", out var groupProp))
             {
-                var group = await _context.LinkGroups.FirstOrDefaultAsync(g => g.Id == request.GroupId.Value, cancellationToken);
-                if (group == null || (group.UserId != userId && !isAdmin))
-                    return BadRequestProblem("Specified group does not exist or does not belong to you");
+                if (groupProp.ValueKind == JsonValueKind.Null)
+                {
+                    // explicit null -> ungroup
+                    link.GroupId = null;
+                }
+                else if (groupProp.ValueKind == JsonValueKind.String)
+                {
+                    var groupStr = groupProp.GetString();
+                    if (string.IsNullOrWhiteSpace(groupStr))
+                    {
+                        link.GroupId = null;
+                    }
+                    else if (Guid.TryParse(groupStr, out var parsedGroupId))
+                    {
+                        if (parsedGroupId == Guid.Empty)
+                        {
+                            // treat empty guid as ungroup
+                            link.GroupId = null;
+                        }
+                        else
+                        {
+                            var group = await _context.LinkGroups.FirstOrDefaultAsync(g => g.Id == parsedGroupId, cancellationToken);
+                            if (group == null || (group.UserId != userId && !isAdmin))
+                                return BadRequestProblem("Specified group does not exist or does not belong to you");
 
-                link.GroupId = request.GroupId;
+                            link.GroupId = parsedGroupId;
+                        }
+                    }
+                    else
+                    {
+                        return BadRequestProblem("Specified group id is not a valid GUID");
+                    }
+                }
+                else
+                {
+                    // If it's another JSON type (e.g., object/number), reject it
+                    return BadRequestProblem("Invalid groupId value");
+                }
             }
 
             if (request.Sequence.HasValue) link.Sequence = request.Sequence.Value;
@@ -281,7 +328,19 @@ public class LinksController : BaseApiController
 
             var isAdmin = User.IsInRole("admin");
 
-            // Cache group lookups
+            // Normalize any explicit empty GUIDs to null (client may send all-zero GUID to indicate ungroup)
+            foreach (var it in items)
+            {
+                if (it.GroupId.HasValue && it.GroupId.Value == Guid.Empty)
+                {
+                    // replace with null by creating a new ReSequenceItemRequest isn't necessary here since ReSequenceItemRequest is a record,
+                    // but we can mutate items list entry by index. Find index and replace.
+                    var idx = items.IndexOf(it);
+                    items[idx] = new ReSequenceItemRequest(it.Id, null, it.Sequence);
+                }
+            }
+
+            // Cache group lookups - exclude nulls
             var groupIdsToCheck = items.Where(i => i.GroupId.HasValue).Select(i => i.GroupId!.Value).Distinct().ToList();
             var groups = new Dictionary<Guid, LinkGroup>();
             if (groupIdsToCheck.Any())
