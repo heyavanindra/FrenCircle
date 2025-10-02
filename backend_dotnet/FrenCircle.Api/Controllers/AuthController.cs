@@ -95,22 +95,8 @@ public sealed class AuthController : BaseApiController
 
             _context.Sessions.Add(session);
 
-            // Create refresh token
-            var refreshTokenValue = GenerateRefreshToken();
-            var refreshToken = new RefreshToken
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                SessionId = session.Id,
-                TokenHash = HashToken(refreshTokenValue), // Store hash, not plain token
-                FamilyId = Guid.NewGuid(),
-                ExpiresAt = request.RememberMe
-                    ? DateTimeOffset.UtcNow.AddDays(60)
-                    : DateTimeOffset.UtcNow.AddDays(14),
-                IssuedAt = DateTimeOffset.UtcNow
-            };
-
-            _context.RefreshTokens.Add(refreshToken);
+            // Create refresh token (use centralized helper so lifetimes are consistent)
+        var (refreshTokenValue, refreshToken) = await CreateAndAddRefreshToken(user.Id, session.Id, request.RememberMe);
             user.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -355,19 +341,12 @@ public sealed class AuthController : BaseApiController
             }
 
             // Create new refresh token (token rotation)
-            var newRefreshTokenValue = GenerateRefreshToken();
-            var newRefreshToken = new RefreshToken
-            {
-                Id = Guid.NewGuid(),
-                UserId = refreshToken.UserId,
-                SessionId = refreshToken.SessionId,
-                TokenHash = HashToken(newRefreshTokenValue),
-                FamilyId = refreshToken.FamilyId,
-                ExpiresAt = DateTimeOffset.UtcNow.AddDays(14),
-                IssuedAt = DateTimeOffset.UtcNow
-            };
-
-            _context.RefreshTokens.Add(newRefreshToken);
+            // Create new refresh token (token rotation) using centralized helper
+            var (newRefreshTokenValue, newRefreshToken) = await CreateAndAddRefreshToken(
+                refreshToken.UserId,
+                refreshToken.SessionId,
+                rememberMe: false,
+                familyId: refreshToken.FamilyId);
 
             // Revoke old token
             refreshToken.RevokedAt = DateTimeOffset.UtcNow;
@@ -620,6 +599,38 @@ public sealed class AuthController : BaseApiController
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         return Convert.ToBase64String(randomBytes);
+    }
+
+    // Centralized helper to create a refresh token entity and add it to the DbContext.
+    // Returns the plain token value (to return to client) and the created RefreshToken entity (for further processing).
+    private Task<(string TokenValue, RefreshToken RefreshToken)> CreateAndAddRefreshToken(
+        Guid userId,
+        Guid sessionId,
+        bool rememberMe = false,
+        Guid? familyId = null)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        // Determine expiry days from configuration, with sensible defaults
+        var defaultDays = _configuration.GetValue<int>("Auth:RefreshTokenDays", 14);
+        var rememberDays = _configuration.GetValue<int>("Auth:RefreshTokenRememberDays", 60);
+        var days = rememberMe ? rememberDays : defaultDays;
+
+        var tokenValue = GenerateRefreshToken();
+        var token = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SessionId = sessionId,
+            TokenHash = HashToken(tokenValue),
+            FamilyId = familyId ?? Guid.NewGuid(),
+            ExpiresAt = now.AddDays(days),
+            IssuedAt = now
+        };
+
+        _context.RefreshTokens.Add(token);
+
+        return Task.FromResult((tokenValue, token));
     }
 
     private static string GenerateVerificationToken()
