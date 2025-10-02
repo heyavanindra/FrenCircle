@@ -347,7 +347,7 @@ curl -X GET "$BASE_URL/profile" `
 
 ---
 
-## 🚀 Quick Test Sequence
+##  Quick Test Sequence
 
 Here's a typical testing sequence:
 

@@ -49,7 +49,7 @@ The JWT tokens now include:
 - **JWT usage examples**: How to use Bearer tokens for protected endpoints
 - **Response format examples**: Complete AuthResponse structure with JWT tokens
 
-## Next Steps 🚀
+## Next Steps 
 
 ### Immediate Testing
 1. Run the application: `dotnet run --project FrenCircle.Api`
@@ -108,7 +108,7 @@ curl -X GET "http://localhost:5000/api/protected" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
-## Files Modified 📁
+## Files Modified 
 - `Program.cs`: JWT authentication configuration
 - `AuthController.cs`: Updated to use JwtService
 - `JwtSettings.cs`: New configuration class
@@ -117,8 +117,8 @@ curl -X GET "http://localhost:5000/api/protected" \
 - `appsettings.json` & `appsettings.Development.json`: JWT config
 - `api-test-curls.md`: Updated documentation
 
-## Package Dependencies 📦
+## Package Dependencies 
 - `Microsoft.AspNetCore.Authentication.JwtBearer`: JWT middleware
 - Existing packages: All maintained
 
-The JWT authentication system is now fully implemented and ready for testing! 🎉
+The JWT authentication system is now fully implemented and ready for testing! 

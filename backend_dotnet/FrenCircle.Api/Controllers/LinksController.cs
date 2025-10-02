@@ -61,7 +61,7 @@ public class LinksController : BaseApiController
                 Description: g.Description,
                 Sequence: g.Sequence,
                 IsActive: g.IsActive,
-                Links: links.Where(l => l.GroupId == g.Id).Select(l => new LinkSummary(
+                Links: links.Where(l => l.GroupId == g.Id).OrderBy(l => l.Sequence).Select(l => new LinkSummary(
                     Id: l.Id,
                     Name: l.Name,
                     Url: l.Url,
@@ -81,7 +81,7 @@ public class LinksController : BaseApiController
                 Description: null,
                 Sequence: 0,
                 IsActive: true,
-                Links: links.Where(l => l.GroupId == null).Select(l => new LinkSummary(
+                Links: links.Where(l => l.GroupId == null).OrderBy(l => l.Sequence).Select(l => new LinkSummary(
                     Id: l.Id,
                     Name: l.Name,
                     Url: l.Url,
@@ -306,90 +306,61 @@ public class LinksController : BaseApiController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Resequence([FromBody] List<ReSequenceItemRequest> items, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Resequencing {Count} links for user {UserId} with CorrelationId {CorrelationId}", items?.Count ?? 0, UserId, CorrelationId);
+        _logger.LogInformation("RESEQUENCE START: {Count} items", items?.Count ?? 0);
 
-        try
+        if (!Guid.TryParse(UserId, out var userId))
+            return UnauthorizedProblem("Invalid user context");
+
+        if (items == null || items.Count == 0)
+            return BadRequestProblem("No items provided");
+
+        // Process each item exactly as sent - use EXACT sequence you specify
+        foreach (var item in items)
         {
-            if (!Guid.TryParse(UserId, out var userId))
-                return UnauthorizedProblem("Invalid user context");
-
-            if (items == null || items.Count == 0)
-                return BadRequestProblem("No items provided");
-
-            var ids = items.Select(i => i.Id).ToList();
-
-            var links = await _context.Links
-                .Where(l => ids.Contains(l.Id))
-                .ToListAsync(cancellationToken);
-
-            var missing = ids.Except(links.Select(l => l.Id)).ToList();
-            if (missing.Any())
-                return NotFoundProblem($"Links not found: {string.Join(',', missing)}");
-
-            var isAdmin = User.IsInRole("admin");
-
-            // Normalize any explicit empty GUIDs to null (client may send all-zero GUID to indicate ungroup)
-            foreach (var it in items)
+            var groupId = item.GroupId;
+            var exactSequence = item.Sequence; // Use EXACTLY what you send
+            
+            _logger.LogInformation("Setting link {Id} to EXACT sequence {Seq} in group {GroupId}", 
+                item.Id, exactSequence, groupId?.ToString() ?? "UNGROUPED");
+                
+            // Direct SQL update - set sequence AND group
+            int rowsAffected;
+            if (groupId.HasValue)
             {
-                if (it.GroupId.HasValue && it.GroupId.Value == Guid.Empty)
-                {
-                    // replace with null by creating a new ReSequenceItemRequest isn't necessary here since ReSequenceItemRequest is a record,
-                    // but we can mutate items list entry by index. Find index and replace.
-                    var idx = items.IndexOf(it);
-                    items[idx] = new ReSequenceItemRequest(it.Id, null, it.Sequence);
-                }
+                rowsAffected = await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE \"Links\" SET \"Sequence\" = {0}, \"GroupId\" = {1}, \"UpdatedAt\" = {2} WHERE \"Id\" = {3} AND \"UserId\" = {4}",
+                    exactSequence, groupId.Value, DateTimeOffset.UtcNow, item.Id, userId);
             }
-
-            // Cache group lookups - exclude nulls
-            var groupIdsToCheck = items.Where(i => i.GroupId.HasValue).Select(i => i.GroupId!.Value).Distinct().ToList();
-            var groups = new Dictionary<Guid, LinkGroup>();
-            if (groupIdsToCheck.Any())
+            else
             {
-                var foundGroups = await _context.LinkGroups
-                    .Where(g => groupIdsToCheck.Contains(g.Id))
-                    .ToListAsync(cancellationToken);
-
-                groups = foundGroups.ToDictionary(g => g.Id);
+                rowsAffected = await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE \"Links\" SET \"Sequence\" = {0}, \"GroupId\" = NULL, \"UpdatedAt\" = {1} WHERE \"Id\" = {2} AND \"UserId\" = {3}",
+                    exactSequence, DateTimeOffset.UtcNow, item.Id, userId);
             }
-
-            foreach (var item in items)
-            {
-                var link = links.First(l => l.Id == item.Id);
-
-                // Permission: owner or admin
-                if (link.UserId != userId && !isAdmin)
-                    return ForbiddenProblem($"You do not have permission to modify link {link.Id}");
-
-                // If group provided, validate it (exists and belongs to user unless admin)
-                if (item.GroupId.HasValue)
-                {
-                    if (!groups.TryGetValue(item.GroupId.Value, out var group))
-                        return BadRequestProblem($"Specified group {item.GroupId} does not exist");
-
-                    if (group.UserId != userId && !isAdmin)
-                        return BadRequestProblem($"Specified group {item.GroupId} does not belong to you");
-
-                    link.GroupId = item.GroupId;
-                }
-                else
-                {
-                    // explicit null means ungroup
-                    link.GroupId = null;
-                }
-
-                link.Sequence = item.Sequence;
-                link.UpdatedAt = DateTimeOffset.UtcNow;
-            }
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return OkEnvelope(new { Message = "Resequenced" });
+            
+            _logger.LogInformation("SQL UPDATE: Link {Id} -> sequence {Seq}, rows affected: {Rows}", 
+                item.Id, exactSequence, rowsAffected);
         }
-        catch (Exception ex)
+
+        // Verify final state
+        var ids = items.Select(i => i.Id).ToList();
+        var finalLinks = await _context.Links
+            .Where(l => ids.Contains(l.Id))
+            .Select(l => new { l.Id, l.Sequence, l.GroupId })
+            .OrderBy(l => l.GroupId).ThenBy(l => l.Sequence)
+            .ToListAsync(cancellationToken);
+            
+        _logger.LogInformation("FINAL DATABASE STATE:");
+        foreach (var link in finalLinks)
         {
-            _logger.LogError(ex, "Error resequencing links for user {UserId}", UserId);
-            return Problem(StatusCodes.Status500InternalServerError, "Internal Server Error", "An error occurred while resequencing links");
+            _logger.LogInformation("Link {Id}: sequence={Seq}, group={GroupId}", 
+                link.Id, link.Sequence, link.GroupId?.ToString() ?? "UNGROUPED");
         }
+
+        return OkEnvelope(new { 
+            Message = "Resequenced exactly as specified", 
+            FinalState = finalLinks 
+        });
     }
 
     [HttpPost("{id:guid}/delete")]

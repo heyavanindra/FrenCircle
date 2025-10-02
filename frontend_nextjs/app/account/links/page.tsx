@@ -13,9 +13,10 @@ import {
   useSensors,
   DragStartEvent,
   DragEndEvent,
-  closestCenter,
+  pointerWithin,
   MeasuringStrategy,
   defaultDropAnimation,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -23,25 +24,16 @@ import {
   arrayMove,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 
 import AccessDenied from "@/components/AccessDenied";
-import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
-import {
-  ArrowLeft, Globe, Plus, GripVertical, ExternalLink, Edit3, Trash2, FolderPlus,
-} from "lucide-react";
+import { ArrowLeft, Globe, Plus, GripVertical, ExternalLink, Edit3, Trash2, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUser } from "@/contexts/UserContext";
@@ -49,8 +41,14 @@ import { useApi, useGet } from "@/hooks/useApi";
 import { GetGroupedLinksResponse, LinkItem, CreateOrEditLinkRequest } from "@/hooks/types";
 
 /* ---------- FX presets ---------- */
-const containerVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
-const cardVariants = { hidden: { opacity: 0, scale: 0.98 }, visible: { opacity: 1, scale: 1, transition: { duration: 0.25 } } };
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+};
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.98 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.25 } },
+};
 
 /* ---------- Sortable row (single Link chip) ---------- */
 function SortableLinkRow({ item, onEdit }: { item: LinkItem; onEdit: (l: LinkItem) => void }) {
@@ -58,7 +56,7 @@ function SortableLinkRow({ item, onEdit }: { item: LinkItem; onEdit: (l: LinkIte
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 50 : "auto",
+    zIndex: isDragging ? 50 : ("auto" as const),
     boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.20)" : undefined,
   } as React.CSSProperties;
 
@@ -66,7 +64,7 @@ function SortableLinkRow({ item, onEdit }: { item: LinkItem; onEdit: (l: LinkIte
     <div
       ref={setNodeRef}
       style={style}
-      className={`group/link flex items-center gap-3 rounded-lg border bg-background/60 hover:bg-accent/50 transition-all p-3 cursor-grab active:cursor-grabbing`}
+      className={"group/link flex items-center gap-3 rounded-lg border bg-background/60 hover:bg-accent/50 transition-all p-3 cursor-grab active:cursor-grabbing"}
       {...attributes}
       {...listeners}
     >
@@ -103,7 +101,7 @@ function SortableLinkRow({ item, onEdit }: { item: LinkItem; onEdit: (l: LinkIte
   );
 }
 
-/* ---------- Group section (sortable container) ---------- */
+/* ---------- Group section (droppable + sortable container) ---------- */
 function GroupSection({
   id,
   name,
@@ -123,8 +121,11 @@ function GroupSection({
   onEdit: (l: LinkItem) => void;
   onEmptyDropHint?: string;
 }) {
+  const containerId = id ?? "__ungrouped__";
+  const { setNodeRef, isOver } = useDroppable({ id: containerId });
+
   return (
-    <AccordionItem value={id ?? "ungrouped"} className="rounded-xl border bg-card">
+    <AccordionItem value={containerId} className="rounded-xl border bg-card">
       <AccordionTrigger className="px-4">
         <div className="flex items-start justify-between w-full gap-3">
           <div className="flex-1 text-left">
@@ -148,7 +149,10 @@ function GroupSection({
       </AccordionTrigger>
       <AccordionContent className="px-4 pb-4">
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[84px]">
+          <div
+            ref={setNodeRef}
+            className={`space-y-2 min-h-[84px] rounded-lg transition ring-offset-2 ${isOver ? "ring-2 ring-primary/40" : ""}`}
+          >
             <AnimatePresence initial={false}>
               {items.map((link) => (
                 <motion.div key={link.id} variants={cardVariants} initial="hidden" animate="visible" exit="hidden">
@@ -266,109 +270,6 @@ export default function LinksPage() {
       meta.from === "ungrouped" ? localUngrouped[meta.index] : localGroups.find((g) => g.id === meta.groupId)!.links[meta.index];
   };
 
-  const onDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    if (!over) return;
-
-    const activeIdStr = String(active.id);
-    const overIdStr = String(over.id);
-
-    // If dropping onto a link, we’ll consider container from that link’s location.
-    // If dropping onto an empty container, over.id will be the container id.
-    const activeContainer = getContainerFromLinkId(activeIdStr);
-    const overContainer = allContainerIds.includes(overIdStr) ? overIdStr : getContainerFromLinkId(overIdStr);
-
-    if (!activeContainer || !overContainer) return;
-
-    // If container changed, move to new group
-    if (activeContainer !== overContainer) {
-      // remove from old
-      let moved: LinkItem | null = null;
-
-      if (activeContainer === "__ungrouped__") {
-        setLocalUngrouped((prev) => {
-          const idx = prev.findIndex((l) => l.id === activeIdStr);
-          if (idx === -1) return prev;
-          moved = prev[idx];
-          const next = [...prev];
-          next.splice(idx, 1);
-          return next;
-        });
-      } else {
-        setLocalGroups((prev) => {
-          const gi = prev.findIndex((g) => g.id === activeContainer);
-          if (gi === -1) return prev;
-          const next = [...prev];
-          const idx = next[gi].links.findIndex((l) => l.id === activeIdStr);
-          if (idx > -1) {
-            moved = next[gi].links[idx];
-            next[gi].links.splice(idx, 1);
-          }
-          return next;
-        });
-      }
-
-      if (!moved) return;
-
-      // insert to new
-      if (overContainer === "__ungrouped__") {
-        setLocalUngrouped((prev) => [moved!, ...prev]);
-      } else {
-        setLocalGroups((prev) => {
-          const gi = prev.findIndex((g) => g.id === overContainer);
-          if (gi === -1) return prev;
-          const next = [...prev];
-          next[gi].links = [moved!, ...next[gi].links];
-          return next;
-        });
-      }
-
-      // persist (group change)
-      try {
-        await post(`/link/${activeIdStr}/edit`, {
-          ...(activeItemRef.current as LinkItem),
-          groupId: overContainer === "__ungrouped__" ? null : overContainer,
-        });
-        await post("/link/resequence", buildResequencePayload()); // optional bulk resequence endpoint (see below)
-        toast.success("Link moved");
-      } catch (e: any) {
-        toast.error(e?.data?.title || "Failed to move link");
-      }
-      return;
-    }
-
-    // Same container reorder
-    if (activeContainer === "__ungrouped__") {
-      setLocalUngrouped((prev) => {
-        const oldIndex = prev.findIndex((i) => i.id === activeIdStr);
-        const newIndex = prev.findIndex((i) => i.id === overIdStr);
-        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return prev;
-        return arrayMove(prev, oldIndex, newIndex);
-      });
-    } else {
-      setLocalGroups((prev) => {
-        const gi = prev.findIndex((g) => g.id === activeContainer);
-        if (gi === -1) return prev;
-        const links = prev[gi].links;
-        const oldIndex = links.findIndex((i) => i.id === activeIdStr);
-        const newIndex = links.findIndex((i) => i.id === overIdStr);
-        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return prev;
-        const next = [...prev];
-        next[gi] = { ...next[gi], links: arrayMove(links, oldIndex, newIndex) };
-        return next;
-      });
-    }
-
-    // persist (sequence change)
-    try {
-      await post("/link/resequence", buildResequencePayload());
-    } catch (e: any) {
-      toast.error(e?.data?.title || "Failed to save order");
-    }
-  };
-
-  // Build a concise resequence payload (OPTIONAL: create this backend route for fewer writes)
   const buildResequencePayload = () => {
     const payload: { id: string; groupId: string | null; sequence: number }[] = [];
     localGroups.forEach((g) => {
@@ -378,72 +279,121 @@ export default function LinksPage() {
     return payload;
   };
 
-  // create/edit helpers
-  const startEdit = (link: LinkItem) => {
-    setEditingLinkId(link.id);
-    setForm({
-      id: link.id,
-      name: link.name,
-      url: link.url,
-      description: link.description || "",
-      groupId: link.groupId,
-      sequence: link.sequence,
-      isActive: link.isActive,
-    });
-    setIsCreating(false);
-  };
+  const onDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over) return;
 
-  const startCreate = (groupId: string | null = null) => {
-    setIsCreating(true);
-    setEditingLinkId(null);
-    setForm({ name: "", url: "", description: "", groupId, sequence: 0, isActive: true });
-  };
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
 
-  const cancel = () => {
-    setIsCreating(false);
-    setEditingLinkId(null);
-    setForm({ name: "", url: "", description: "", groupId: null, sequence: 0, isActive: true });
-  };
+    // over.id can be a container id or another item id
+    const activeContainer = getContainerFromLinkId(activeIdStr);
+    const overContainer = allContainerIds.includes(overIdStr) ? overIdStr : getContainerFromLinkId(overIdStr);
 
-  const saveLink = async () => {
-    try {
-      if (editingLinkId) {
-        await post(`/link/${editingLinkId}/edit`, form as any);
-        toast.success("Link updated");
+    if (!activeContainer || !overContainer) return;
+
+    // BUILD PAYLOAD FROM INTENDED FINAL STATE - DON'T USE OPTIMISTIC UPDATES
+    let resequencePayload: { id: string; groupId: string | null; sequence: number }[] = [];
+
+    // Cross-container move
+    if (activeContainer !== overContainer) {
+      let moved: LinkItem | null = null;
+
+      // Find the moved item
+      if (activeContainer === "__ungrouped__") {
+        const idx = localUngrouped.findIndex((l) => l.id === activeIdStr);
+        if (idx > -1) moved = localUngrouped[idx];
       } else {
-        await post("/link", form as any);
-        toast.success("Link created");
+        const group = localGroups.find((g) => g.id === activeContainer);
+        if (group) {
+          const idx = group.links.findIndex((l) => l.id === activeIdStr);
+          if (idx > -1) moved = group.links[idx];
+        }
       }
-      await refetchLinks();
-      cancel();
-    } catch (err: any) {
-      console.error("Save link failed", err);
-      toast.error(err?.data?.title || err?.message || "Failed to save link");
-    }
-  };
 
-  const createGroup = async () => {
-    try {
-      await post("/group", groupForm as any);
-      toast.success("Group created");
-      await refetchLinks();
-      setGroupForm({ name: "", description: "", sequence: 0 });
-      setIsCreatingGroup(false);
-    } catch (err: any) {
-      console.error("Create group failed", err);
-      toast.error(err?.data?.title || err?.message || "Failed to create group");
-    }
-  };
+      if (!moved) return;
 
-  const deleteGroup = async (groupId: string) => {
-    if (!confirm("Delete group? Links in the group will be moved to Ungrouped.")) return;
+      // Build payload for cross-container move
+      // 1. Add moved item to target container at position 0
+      const targetGroupId = overContainer === "__ungrouped__" ? null : overContainer;
+      resequencePayload.push({ id: moved.id, groupId: targetGroupId, sequence: 0 });
+
+      // 2. Add existing items in target container, shifted by 1
+      if (overContainer === "__ungrouped__") {
+        localUngrouped.forEach((link, i) => {
+          resequencePayload.push({ id: link.id, groupId: null, sequence: i + 1 });
+        });
+      } else {
+        const targetGroup = localGroups.find((g) => g.id === overContainer);
+        if (targetGroup) {
+          targetGroup.links.forEach((link, i) => {
+            resequencePayload.push({ id: link.id, groupId: overContainer, sequence: i + 1 });
+          });
+        }
+      }
+
+      // 3. Resequence source container (excluding moved item)
+      if (activeContainer === "__ungrouped__") {
+        localUngrouped
+          .filter((l) => l.id !== activeIdStr)
+          .forEach((link, i) => {
+            resequencePayload.push({ id: link.id, groupId: null, sequence: i });
+          });
+      } else {
+        const sourceGroup = localGroups.find((g) => g.id === activeContainer);
+        if (sourceGroup) {
+          sourceGroup.links
+            .filter((l) => l.id !== activeIdStr)
+            .forEach((link, i) => {
+              resequencePayload.push({ id: link.id, groupId: activeContainer, sequence: i });
+            });
+        }
+      }
+
+      try {
+        await post("/link/resequence", resequencePayload);
+        await refetchLinks(); // Refresh data from server
+        toast.success("Link moved");
+      } catch (e: any) {
+        toast.error(e?.data?.title || "Failed to move link");
+      }
+      return;
+    }
+
+    // Same container reorder - calculate final order
+    let finalOrder: LinkItem[] = [];
+    if (activeContainer === "__ungrouped__") {
+      const oldIndex = localUngrouped.findIndex((i) => i.id === activeIdStr);
+      const newIndex = localUngrouped.findIndex((i) => i.id === overIdStr);
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      finalOrder = arrayMove(localUngrouped, oldIndex, newIndex);
+      
+      // Build payload from final order
+      finalOrder.forEach((link, i) => {
+        resequencePayload.push({ id: link.id, groupId: null, sequence: i });
+      });
+    } else {
+      const group = localGroups.find((g) => g.id === activeContainer);
+      if (!group) return;
+      
+      const oldIndex = group.links.findIndex((i) => i.id === activeIdStr);
+      const newIndex = group.links.findIndex((i) => i.id === overIdStr);
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      finalOrder = arrayMove(group.links, oldIndex, newIndex);
+      
+      // Build payload from final order
+      finalOrder.forEach((link, i) => {
+        resequencePayload.push({ id: link.id, groupId: activeContainer, sequence: i });
+      });
+    }
+
+    // Persist resequence
     try {
-      await post(`/group/${groupId}/delete`, {});
-      toast.success("Group deleted");
-      await refetchLinks();
-    } catch (err: any) {
-      console.error("Delete group failed", err);
-      toast.error(err?.data?.title || err?.message || "Failed to delete group");
+      await post("/link/resequence", resequencePayload);
+      await refetchLinks(); // Refresh data from server
+    } catch (e: any) {
+      toast.error(e?.data?.title || "Failed to save order");
     }
   };
 
@@ -513,13 +463,14 @@ export default function LinksPage() {
               {/* DnD vertical accordion */}
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={pointerWithin}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
-                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                // allow cross-container moves (no restrictToParentElement)
+                modifiers={[restrictToVerticalAxis]}
                 measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
               >
-                <Accordion type="multiple" defaultValue={[...groupedData.data.groups.map((g) => g.id), "ungrouped"]} className="space-y-3">
+                <Accordion type="multiple" defaultValue={[...groupedData.data.groups.map((g) => g.id), "__ungrouped__"]} className="space-y-3">
                   {/* Ungrouped as first section for speed */}
                   <GroupSection
                     id={null}
@@ -645,7 +596,7 @@ export default function LinksPage() {
                           <label className="text-sm font-medium mb-2 block">Group</label>
                           <select
                             value={form.groupId ?? "ungrouped"}
-                            onChange={(e) => setForm((f) => ({ ...f, groupId: e.target.value === "ungrouped" ? null : e.target.value }))}
+                            onChange={(e) => setForm((f) => ({ ...f, groupId: e.target.value === "ungrouped" ? null : (e.target.value as string) }))}
                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                           >
                             <option value="ungrouped">Ungrouped</option>
@@ -671,4 +622,73 @@ export default function LinksPage() {
       </div>
     </div>
   );
+
+  // --- helpers ---
+  function startEdit(link: LinkItem) {
+    setEditingLinkId(link.id);
+    setForm({
+      id: link.id,
+      name: link.name,
+      url: link.url,
+      description: link.description || "",
+      groupId: link.groupId,
+      sequence: link.sequence,
+      isActive: link.isActive,
+    });
+    setIsCreating(false);
+  }
+
+  function startCreate(groupId: string | null = null) {
+    setIsCreating(true);
+    setEditingLinkId(null);
+    setForm({ name: "", url: "", description: "", groupId, sequence: 0, isActive: true });
+  }
+
+  function cancel() {
+    setIsCreating(false);
+    setEditingLinkId(null);
+    setForm({ name: "", url: "", description: "", groupId: null, sequence: 0, isActive: true });
+  }
+
+  async function saveLink() {
+    try {
+      if (editingLinkId) {
+        await post(`/link/${editingLinkId}/edit`, form as any);
+        toast.success("Link updated");
+      } else {
+        await post("/link", form as any);
+        toast.success("Link created");
+      }
+      await refetchLinks();
+      cancel();
+    } catch (err: any) {
+      console.error("Save link failed", err);
+      toast.error(err?.data?.title || err?.message || "Failed to save link");
+    }
+  }
+
+  async function createGroup() {
+    try {
+      await post("/group", groupForm as any);
+      toast.success("Group created");
+      await refetchLinks();
+      setGroupForm({ name: "", description: "", sequence: 0 });
+      setIsCreatingGroup(false);
+    } catch (err: any) {
+      console.error("Create group failed", err);
+      toast.error(err?.data?.title || err?.message || "Failed to create group");
+    }
+  }
+
+  async function deleteGroup(groupId: string) {
+    if (!confirm("Delete group? Links in the group will be moved to Ungrouped.")) return;
+    try {
+      await post(`/group/${groupId}/delete`, {});
+      toast.success("Group deleted");
+      await refetchLinks();
+    } catch (err: any) {
+      console.error("Delete group failed", err);
+      toast.error(err?.data?.title || err?.message || "Failed to delete group");
+    }
+  }
 }
