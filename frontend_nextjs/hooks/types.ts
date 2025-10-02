@@ -364,3 +364,8 @@ export interface UpdateGroupRequest {
   sequence?: number | null;
   isActive?: boolean | null;
 }
+
+export interface GroupResequenceItemRequest {
+  id: string;
+  sequence: number;
+}

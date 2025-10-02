@@ -38,7 +38,7 @@ import { toast } from "sonner";
 
 import { useUser } from "@/contexts/UserContext";
 import { useApi, useGet } from "@/hooks/useApi";
-import { GetGroupedLinksResponse, LinkItem, CreateOrEditLinkRequest, UpdateGroupRequest } from "@/hooks/types";
+import { GetGroupedLinksResponse, LinkItem, CreateOrEditLinkRequest, UpdateGroupRequest, GroupResequenceItemRequest } from "@/hooks/types";
 
 /* ---------- FX presets ---------- */
 const containerVariants = {
@@ -101,6 +101,61 @@ function SortableLinkRow({ item, onEdit }: { item: LinkItem; onEdit: (l: LinkIte
   );
 }
 
+/* ---------- Sortable Group Header ---------- */
+function SortableGroupHeader({ id, name, description, onCreateLink, onDeleteGroup, onEditGroup }: {
+  id: string;
+  name: string;
+  description?: string | null;
+  onCreateLink: (groupId: string) => void;
+  onDeleteGroup?: (groupId: string) => void;
+  onEditGroup?: (groupId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: `group-${id}` 
+  });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : ("auto" as const),
+  } as React.CSSProperties;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-start justify-between w-full gap-3 ${isDragging ? 'opacity-50' : ''}`}
+      {...attributes}
+    >
+      <div className="flex-1 text-left">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-gradient-to-r from-primary to-blue-500" />
+          <span className="font-semibold">{name}</span>
+          <div {...listeners} className="cursor-grab active:cursor-grabbing ml-1">
+            <GripVertical className="h-4 w-4 text-muted-foreground opacity-60 hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
+        {description ? <p className="text-xs text-muted-foreground mt-1">{description}</p> : null}
+      </div>
+      <div className="flex items-center gap-1">
+        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onCreateLink(id); }}>
+          <Plus className="h-4 w-4" />
+        </Button>
+        {onEditGroup ? (
+          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onEditGroup(id); }}>
+            <Edit3 className="h-4 w-4" />
+          </Button>
+        ) : null}
+        {onDeleteGroup ? (
+          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onDeleteGroup(id); }}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Group section (droppable + sortable container) ---------- */
 function GroupSection({
   id,
@@ -129,30 +184,31 @@ function GroupSection({
   return (
     <AccordionItem value={containerId} className="rounded-xl border bg-card">
       <AccordionTrigger className="px-4">
-        <div className="flex items-start justify-between w-full gap-3">
-          <div className="flex-1 text-left">
-            <div className="flex items-center gap-2">
-              <div className={`h-2 w-2 rounded-full ${id ? "bg-gradient-to-r from-primary to-blue-500" : "bg-muted-foreground"}`} />
-              <span className="font-semibold">{name}</span>
+        {id ? (
+          <SortableGroupHeader 
+            id={id}
+            name={name}
+            description={description}
+            onCreateLink={onCreateLink}
+            onDeleteGroup={onDeleteGroup}
+            onEditGroup={onEditGroup}
+          />
+        ) : (
+          <div className="flex items-start justify-between w-full gap-3">
+            <div className="flex-1 text-left">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                <span className="font-semibold">{name}</span>
+              </div>
+              {description ? <p className="text-xs text-muted-foreground mt-1">{description}</p> : null}
             </div>
-            {description ? <p className="text-xs text-muted-foreground mt-1">{description}</p> : null}
-          </div>
-          <div className="flex items-center gap-1">
-            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onCreateLink(id); }}>
-              <Plus className="h-4 w-4" />
-            </Button>
-            {id && onEditGroup ? (
-              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onEditGroup(id); }}>
-                <Edit3 className="h-4 w-4" />
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onCreateLink(id); }}>
+                <Plus className="h-4 w-4" />
               </Button>
-            ) : null}
-            {id && onDeleteGroup ? (
-              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onDeleteGroup(id); }}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            ) : null}
+            </div>
           </div>
-        </div>
+        )}
       </AccordionTrigger>
       <AccordionContent className="px-4 pb-4">
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
@@ -240,12 +296,14 @@ export default function LinksPage() {
   useEffect(() => {
     if (!groupedData?.data) return;
     setLocalGroups(
-      groupedData.data.groups.map((g) => ({
-        id: g.id,
-        name: g.name,
-        description: g.description,
-        links: [...g.links].sort((a, b) => a.sequence - b.sequence),
-      }))
+      [...groupedData.data.groups]
+        .sort((a, b) => a.sequence - b.sequence) // Sort groups by sequence
+        .map((g) => ({
+          id: g.id,
+          name: g.name,
+          description: g.description,
+          links: [...g.links].sort((a, b) => a.sequence - b.sequence),
+        }))
     );
     setLocalUngrouped([...groupedData.data.ungrouped.links].sort((a, b) => a.sequence - b.sequence));
   }, [groupedData]);
@@ -280,6 +338,14 @@ export default function LinksPage() {
   const onDragStart = (event: DragStartEvent) => {
     const id = String(event.active.id);
     setActiveId(id);
+    
+    // Check if it's a group being dragged
+    if (id.startsWith('group-')) {
+      // Group drag - no need to set activeItemRef for groups
+      return;
+    }
+    
+    // Link drag
     const meta = findItem(id);
     if (!meta) return;
     activeItemRef.current =
@@ -303,6 +369,36 @@ export default function LinksPage() {
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
 
+    // Handle group reordering
+    if (activeIdStr.startsWith('group-') && overIdStr.startsWith('group-')) {
+      const activeGroupId = activeIdStr.replace('group-', '');
+      const overGroupId = overIdStr.replace('group-', '');
+      
+      const oldIndex = localGroups.findIndex(g => g.id === activeGroupId);
+      const newIndex = localGroups.findIndex(g => g.id === overGroupId);
+      
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      
+      // Calculate final group order
+      const finalGroupOrder = arrayMove(localGroups, oldIndex, newIndex);
+      
+      // Build group resequence payload
+      const groupResequencePayload: GroupResequenceItemRequest[] = finalGroupOrder.map((group, index) => ({
+        id: group.id,
+        sequence: index
+      }));
+
+      try {
+        await post("/group/resequence", groupResequencePayload);
+        await refetchLinks(); // Refresh data from server
+        toast.success("Groups reordered");
+      } catch (e: any) {
+        toast.error(e?.data?.title || "Failed to reorder groups");
+      }
+      return;
+    }
+
+    // Handle link reordering (existing logic)
     // over.id can be a container id or another item id
     const activeContainer = getContainerFromLinkId(activeIdStr);
     const overContainer = allContainerIds.includes(overIdStr) ? overIdStr : getContainerFromLinkId(overIdStr);
@@ -486,33 +582,35 @@ export default function LinksPage() {
                 modifiers={[restrictToVerticalAxis]}
                 measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
               >
-                <Accordion type="multiple" defaultValue={[...groupedData.data.groups.map((g) => g.id), "__ungrouped__"]} className="space-y-3">
-                  {/* Ungrouped as first section for speed */}
-                  <GroupSection
-                    id={null}
-                    name="Ungrouped"
-                    description="Links without a group"
-                    items={localUngrouped}
-                    onCreateLink={startCreate}
-                    onEdit={startEdit}
-                    onEmptyDropHint="Drop links here"
-                  />
-
-                  {/* All groups */}
-                  {localGroups.map((g) => (
+                <SortableContext items={localGroups.map(g => `group-${g.id}`)} strategy={verticalListSortingStrategy}>
+                  <Accordion type="multiple" defaultValue={[...groupedData.data.groups.map((g) => g.id), "__ungrouped__"]} className="space-y-3">
+                    {/* Ungrouped as first section for speed */}
                     <GroupSection
-                      key={g.id}
-                      id={g.id}
-                      name={g.name}
-                      description={g.description}
-                      items={g.links}
+                      id={null}
+                      name="Ungrouped"
+                      description="Links without a group"
+                      items={localUngrouped}
                       onCreateLink={startCreate}
-                      onDeleteGroup={deleteGroup}
-                      onEditGroup={startEditGroup}
                       onEdit={startEdit}
+                      onEmptyDropHint="Drop links here"
                     />
-                  ))}
-                </Accordion>
+
+                    {/* All groups */}
+                    {localGroups.map((g) => (
+                      <GroupSection
+                        key={g.id}
+                        id={g.id}
+                        name={g.name}
+                        description={g.description}
+                        items={g.links}
+                        onCreateLink={startCreate}
+                        onDeleteGroup={deleteGroup}
+                        onEditGroup={startEditGroup}
+                        onEdit={startEdit}
+                      />
+                    ))}
+                  </Accordion>
+                </SortableContext>
 
                 <DragOverlay dropAnimation={defaultDropAnimation}>
                   {dragOverlayItem ? (

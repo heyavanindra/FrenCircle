@@ -10,6 +10,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FrenCircle.Api.Controllers;
 
+// DTO for group resequence payload
+public record GroupResequenceItemRequest(Guid Id, int Sequence);
+
 [Route("group")]
 [ApiController]
 public sealed class GroupsController : BaseApiController
@@ -156,6 +159,71 @@ public sealed class GroupsController : BaseApiController
         {
             _logger.LogError(ex, "Error deleting group {GroupId}", id);
             return Problem(StatusCodes.Status500InternalServerError, "Internal Server Error", "An error occurred while deleting the group");
+        }
+    }
+
+    /// <summary>
+    /// Resequence groups for the current user. POST-only.
+    /// Body: [{ "id": "...", "sequence": 0 }, ...]
+    /// </summary>
+    [HttpPost("resequence")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ResequenceGroups([FromBody] List<GroupResequenceItemRequest> items, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("GROUP RESEQUENCE START: {Count} items", items?.Count ?? 0);
+
+        if (!Guid.TryParse(UserId, out var userId))
+            return UnauthorizedProblem("Invalid user context");
+
+        if (items == null || items.Count == 0)
+            return BadRequestProblem("No items provided");
+
+        try
+        {
+            // Use execution strategy to handle retries for transactional operations
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                // Process each group exactly as sent - use EXACT sequence specified
+                foreach (var item in items)
+                {
+                    var exactSequence = item.Sequence;
+                    
+                    _logger.LogInformation("Setting group {Id} to EXACT sequence {Seq}", 
+                        item.Id, exactSequence);
+                        
+                    // Direct SQL update - set sequence for user's groups only
+                    var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
+                        "UPDATE \"LinkGroups\" SET \"Sequence\" = {0}, \"UpdatedAt\" = {1} WHERE \"Id\" = {2} AND \"UserId\" = {3}",
+                        exactSequence, DateTimeOffset.UtcNow, item.Id, userId);
+                    
+                    _logger.LogInformation("SQL UPDATE: Group {Id} -> sequence {Seq}, rows affected: {Rows}", 
+                        item.Id, exactSequence, rowsAffected);
+                }
+            });
+
+            // Verify final state
+            var ids = items.Select(i => i.Id).ToList();
+            var finalGroups = await _context.LinkGroups
+                .Where(g => ids.Contains(g.Id) && g.UserId == userId)
+                .Select(g => new { g.Id, g.Sequence, g.Name })
+                .OrderBy(g => g.Sequence)
+                .ToListAsync(cancellationToken);
+            
+            _logger.LogInformation("FINAL GROUP STATE: {Groups}", finalGroups);
+
+            return OkEnvelope(new 
+            { 
+                Message = "Groups resequenced exactly as specified", 
+                FinalState = finalGroups 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resequencing groups for user {UserId}", userId);
+            return Problem(StatusCodes.Status500InternalServerError, "Internal Server Error", "An error occurred while resequencing groups");
         }
     }
 }
