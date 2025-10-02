@@ -357,3 +357,10 @@ export interface CreateOrEditLinkRequest {
   sequence?: number;
   isActive?: boolean;
 }
+
+export interface UpdateGroupRequest {
+  name?: string | null;
+  description?: string | null;
+  sequence?: number | null;
+  isActive?: boolean | null;
+}

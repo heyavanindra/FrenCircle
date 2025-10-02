@@ -38,7 +38,7 @@ import { toast } from "sonner";
 
 import { useUser } from "@/contexts/UserContext";
 import { useApi, useGet } from "@/hooks/useApi";
-import { GetGroupedLinksResponse, LinkItem, CreateOrEditLinkRequest } from "@/hooks/types";
+import { GetGroupedLinksResponse, LinkItem, CreateOrEditLinkRequest, UpdateGroupRequest } from "@/hooks/types";
 
 /* ---------- FX presets ---------- */
 const containerVariants = {
@@ -109,6 +109,7 @@ function GroupSection({
   items,
   onCreateLink,
   onDeleteGroup,
+  onEditGroup,
   onEdit,
   onEmptyDropHint,
 }: {
@@ -118,6 +119,7 @@ function GroupSection({
   items: LinkItem[];
   onCreateLink: (groupId: string | null) => void;
   onDeleteGroup?: (groupId: string) => void;
+  onEditGroup?: (groupId: string) => void;
   onEdit: (l: LinkItem) => void;
   onEmptyDropHint?: string;
 }) {
@@ -139,6 +141,11 @@ function GroupSection({
             <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onCreateLink(id); }}>
               <Plus className="h-4 w-4" />
             </Button>
+            {id && onEditGroup ? (
+              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onEditGroup(id); }}>
+                <Edit3 className="h-4 w-4" />
+              </Button>
+            ) : null}
             {id && onDeleteGroup ? (
               <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onDeleteGroup(id); }}>
                 <Trash2 className="h-4 w-4" />
@@ -201,6 +208,15 @@ export default function LinksPage() {
     name: "",
     description: "",
     sequence: 0,
+  });
+
+  // group edit modal
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [groupEditForm, setGroupEditForm] = useState<UpdateGroupRequest>({
+    name: "",
+    description: "",
+    sequence: 0,
+    isActive: true,
   });
 
   // Local optimistic structure
@@ -492,6 +508,7 @@ export default function LinksPage() {
                       items={g.links}
                       onCreateLink={startCreate}
                       onDeleteGroup={deleteGroup}
+                      onEditGroup={startEditGroup}
                       onEdit={startEdit}
                     />
                   ))}
@@ -542,6 +559,49 @@ export default function LinksPage() {
                         <div className="flex gap-2 pt-4">
                           <Button onClick={createGroup} className="flex-1">Create Group</Button>
                           <Button variant="ghost" onClick={() => setIsCreatingGroup(false)}>Cancel</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Edit Group Modal */}
+              <AnimatePresence>
+                {editingGroupId && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+                    onClick={cancelGroupEdit}
+                  >
+                    <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+                      <CardHeader>
+                        <CardTitle>Edit Group</CardTitle>
+                        <CardDescription>Update group details</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Group Name</label>
+                          <Input
+                            placeholder="e.g. Work Links"
+                            value={groupEditForm.name ?? ""}
+                            onChange={(e) => setGroupEditForm((f) => ({ ...f, name: e.target.value }))}
+                            autoFocus
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Description (Optional)</label>
+                          <Input
+                            placeholder="What kind of links are these?"
+                            value={groupEditForm.description ?? ""}
+                            onChange={(e) => setGroupEditForm((f) => ({ ...f, description: e.target.value }))}
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-4">
+                          <Button onClick={saveGroupEdit} className="flex-1">Save Changes</Button>
+                          <Button variant="ghost" onClick={cancelGroupEdit}>Cancel</Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -689,6 +749,43 @@ export default function LinksPage() {
     } catch (err: any) {
       console.error("Delete group failed", err);
       toast.error(err?.data?.title || err?.message || "Failed to delete group");
+    }
+  }
+
+  function startEditGroup(groupId: string) {
+    const group = localGroups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    setEditingGroupId(groupId);
+    setGroupEditForm({
+      name: group.name,
+      description: group.description,
+      sequence: 0, // sequence is handled automatically
+      isActive: true, // groups are active by default
+    });
+  }
+
+  function cancelGroupEdit() {
+    setEditingGroupId(null);
+    setGroupEditForm({
+      name: "",
+      description: "",
+      sequence: 0,
+      isActive: true,
+    });
+  }
+
+  async function saveGroupEdit() {
+    if (!editingGroupId) return;
+    
+    try {
+      await post(`/group/${editingGroupId}/edit`, groupEditForm);
+      toast.success("Group updated");
+      await refetchLinks();
+      cancelGroupEdit();
+    } catch (err: any) {
+      console.error("Save group edit failed", err);
+      toast.error(err?.data?.title || err?.message || "Failed to update group");
     }
   }
 }
