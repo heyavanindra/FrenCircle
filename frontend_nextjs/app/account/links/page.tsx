@@ -294,7 +294,7 @@ export default function LinksPage() {
     if (!activeContainer || !overContainer) return;
 
     // BUILD PAYLOAD FROM INTENDED FINAL STATE - DON'T USE OPTIMISTIC UPDATES
-    let resequencePayload: { id: string; groupId: string | null; sequence: number }[] = [];
+    const resequencePayload: { id: string; groupId: string | null; sequence: number }[] = [];
 
     // Cross-container move
     if (activeContainer !== overContainer) {
