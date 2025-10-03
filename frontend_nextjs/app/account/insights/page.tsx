@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import AccessDenied from "@/components/AccessDenied";
 import {
@@ -45,41 +44,13 @@ const itemVariants = {
 export default function InsightsPage() {
   const { user, isAuthenticated } = useUser();
 
-  if (!isAuthenticated || !user) {
-    return <AccessDenied />;
-  }
-
+  // Hooks must be called unconditionally — place them before any early returns
   // Fetch user's links to display link count in the overview
   const { data: linksResp, loading: loadingLinks } = useGet<any>('/link');
   // Fetch per-link click counts so we can display total clicks in the overview
   const { data: linkCountsResp, loading: loadingLinkCounts } = useGet<any[]>('/analytics/my/links');
 
   const [daysActive, setDaysActive] = useState<number | null>(null);
-
-  // Compute links count from the /link response
-  const linksCount = (() => {
-    try {
-      const resp = (linksResp && (linksResp as any).data) ? (linksResp as any).data : linksResp ?? {};
-      const groups = (resp && resp.groups) ? resp.groups : (resp?.groups ?? []);
-      const ungrouped = (resp && resp.ungrouped) ? resp.ungrouped : (resp?.ungrouped ?? { links: [] });
-      const links = ([] as any[]).concat(...(groups.map((g: any) => g.links ?? [])), ungrouped.links ?? []);
-      return links.length;
-    } catch (e) {
-      return 0;
-    }
-  })();
-
-  const totalClicks = (() => {
-    try {
-      const counts = (linkCountsResp && (linkCountsResp as any).data) ? (linkCountsResp as any).data : linkCountsResp ?? [];
-      return (counts as any[]).reduce((s, r) => s + (r?.clicks || 0), 0);
-    } catch (e) {
-      return 0;
-    }
-  })();
-
-  // parsed counts array for passing into the overview component
-  const parsedLinkCounts = (linkCountsResp && (linkCountsResp as any).data) ? (linkCountsResp as any).data : (Array.isArray(linkCountsResp) ? linkCountsResp : []);
 
   useEffect(() => {
     // Try to derive createdAt from user object if present
@@ -109,7 +80,7 @@ export default function InsightsPage() {
             return;
           }
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
       if (mounted) setDaysActive(1);
@@ -118,6 +89,36 @@ export default function InsightsPage() {
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!isAuthenticated || !user) {
+    return <AccessDenied />;
+  }
+
+  // Compute links count from the /link response
+  const linksCount = (() => {
+    try {
+      const resp = (linksResp && (linksResp as any).data) ? (linksResp as any).data : linksResp ?? {};
+      const groups = (resp && resp.groups) ? resp.groups : (resp?.groups ?? []);
+      const ungrouped = (resp && resp.ungrouped) ? resp.ungrouped : (resp?.ungrouped ?? { links: [] });
+      const links = ([] as any[]).concat(...(groups.map((g: any) => g.links ?? [])), ungrouped.links ?? []);
+      return links.length;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const totalClicks = (() => {
+    try {
+      const counts = (linkCountsResp && (linkCountsResp as any).data) ? (linkCountsResp as any).data : linkCountsResp ?? [];
+      return (counts as any[]).reduce((s, r) => s + (r?.clicks || 0), 0);
+    } catch {
+      return 0;
+    }
+  })();
+
+  // parsed counts array for passing into the overview component
+  const parsedLinkCounts = (linkCountsResp && (linkCountsResp as any).data) ? (linkCountsResp as any).data : (Array.isArray(linkCountsResp) ? linkCountsResp : []);
+
 
   return (
     <div className="min-h-screen bg-background">
