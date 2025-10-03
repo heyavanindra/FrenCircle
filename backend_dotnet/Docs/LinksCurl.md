@@ -236,6 +236,53 @@ curl -X POST "https://localhost:7001/link/resequence" \
 **Expected Response (200 OK)**
 ```json
 {
+
+  ---
+
+  ## 🔔 Record link click (analytics)
+
+  When a preview or any client clicks a link, the client should POST a click event to the server so analytics can be recorded. This endpoint is intentionally tiny and accepts the link id in the path and a minimal body.
+
+  Endpoint:
+
+
+  POST https://localhost:7001/link/{linkId}/click
+
+  Headers:
+  - Content-Type: application/json
+  - X-Correlation-Id: $(uuidgen)
+
+  Body (example):
+  ```json
+  {
+    "linkId": "33333333-3333-3333-3333-333333333333",
+    "fp": "user-fingerprint-from-localstorage",
+    "location": {
+      "coords": { "latitude": 12.3456, "longitude": -98.7654, "accuracy": 30 }
+    }
+  }
+  ```
+
+  Notes:
+  - The client will include a fingerprint stored in localStorage under the key `fp` when available.
+  - `location` and `coords` are optional and only sent if the client can obtain geolocation permission.
+  - No Authorization header is required for this analytics endpoint (it's fire-and-forget).
+
+  cURL example:
+  ```bash
+  curl -X POST "https://localhost:7001/link/33333333-3333-3333-3333-333333333333/click" \
+    -H "Content-Type: application/json" \
+    -H "X-Correlation-Id: $(uuidgen)" \
+    -d '{ "linkId": "33333333-3333-3333-3333-333333333333", "fp": "abc123fingerprint" }'
+  ```
+
+  **Expected Response (200 OK)**
+  ```json
+  {
+    "data": { "message": "Recorded" },
+    "meta": null
+  }
+  ```
   "data": { "message": "Resequenced" },
   "meta": null
 }

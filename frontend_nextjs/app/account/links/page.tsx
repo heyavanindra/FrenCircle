@@ -131,7 +131,7 @@ function SortableGroupHeader({ id, name, description, onCreateLink, onDeleteGrou
       <div className="flex-1 text-left">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-gradient-to-r from-primary to-blue-500" />
-          <span className="font-semibold">{name}</span>
+              <span className="font-semibold no-underline hover:no-underline">{name}</span>
           <div {...listeners} className="cursor-grab active:cursor-grabbing ml-1">
             <GripVertical className="h-4 w-4 text-muted-foreground opacity-60 hover:opacity-100 transition-opacity" />
           </div>
@@ -199,7 +199,7 @@ function GroupSection({
             <div className="flex-1 text-left">
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                <span className="font-semibold">{name}</span>
+                <span className="font-semibold no-underline hover:no-underline">{name}</span>
               </div>
               {description ? <p className="text-xs text-muted-foreground mt-1">{description}</p> : null}
             </div>

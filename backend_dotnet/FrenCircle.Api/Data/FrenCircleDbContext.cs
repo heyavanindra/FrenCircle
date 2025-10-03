@@ -24,6 +24,7 @@ public class FrenCircleDbContext : DbContext
     public DbSet<RateLimitBucket> RateLimitBuckets { get; set; }
     public DbSet<Link> Links { get; set; }
     public DbSet<LinkGroup> LinkGroups { get; set; }
+    public DbSet<Analytics> Analytics { get; set; }
     public DbSet<AppConfig> AppConfigs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -44,6 +45,7 @@ public class FrenCircleDbContext : DbContext
         ConfigureTwoFactorMethodEntity(modelBuilder);
         ConfigureTwoFactorCodeEntity(modelBuilder);
         ConfigureAuditLogEntity(modelBuilder);
+    ConfigureAnalyticsEntity(modelBuilder);
         ConfigureRateLimitBucketEntity(modelBuilder);
     ConfigureLinkEntity(modelBuilder);
     ConfigureLinkGroupEntity(modelBuilder);
@@ -233,6 +235,16 @@ public class FrenCircleDbContext : DbContext
 
         // Indexes
         entity.HasIndex(e => new { e.Key, e.WindowStart });
+    }
+
+    private void ConfigureAnalyticsEntity(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<Analytics>();
+
+        entity.HasKey(a => a.Id);
+        entity.HasIndex(a => a.LinkId);
+        entity.HasIndex(a => a.UserId);
+        entity.HasIndex(a => a.At);
     }
 
     private void ConfigureAppConfigEntity(ModelBuilder modelBuilder)

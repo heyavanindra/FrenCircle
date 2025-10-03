@@ -1,21 +1,143 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using FrenCircle.Contracts;
 using FrenCircle.Contracts.Interfaces;
+using FrenCircle.Api.Data;
+using FrenCircle.Entities;
+using System.Net;
+using System.Text.Json;
+using Microsoft.Extensions.Primitives;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace FrenCircle.Api.Controllers;
+
+public record ClickPayload(string? fp, LocationDto? location);
+public record LocationDto(CoordsDto? coords);
+public record CoordsDto(double latitude, double longitude, double accuracy);
 
 [Route("analytics")]
 public sealed class AnalyticsController : BaseApiController
 {
     private readonly ILogger<AnalyticsController> _logger;
     private readonly IUserRepository _userRepository;
+    private readonly FrenCircleDbContext _db;
 
     public AnalyticsController(
         ILogger<AnalyticsController> logger,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        FrenCircleDbContext db)
     {
         _logger = logger;
         _userRepository = userRepository;
+        _db = db;
+    }
+
+    // DTOs are declared as public records at the namespace level above.
+
+    /// <summary>
+    /// Record a click for a link. This endpoint is intentionally permissive and does not require authentication.
+    /// If the request is authenticated, the UserId will be set on the AuditLog so users can later query their own analytics.
+    /// </summary>
+    [HttpPost("/link/{linkId:guid}/click")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RecordLinkClick([FromRoute] Guid linkId, [FromBody] ClickPayload? body, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Build metadata
+            // Persist a dedicated Analytics record for querying
+            var analytics = new FrenCircle.Entities.Analytics
+            {
+                Id = Guid.NewGuid(),
+                LinkId = linkId,
+                Fingerprint = body?.fp,
+                At = DateTimeOffset.UtcNow
+            };
+            // Attach user if present
+            if (IsAuthenticated && Guid.TryParse(UserId, out var uid))
+            {
+                analytics.UserId = uid;
+            }
+
+            // User agent
+            if (Request.Headers.TryGetValue("User-Agent", out var ua) && !StringValues.IsNullOrEmpty(ua))
+            {
+                analytics.UserAgent = ua.ToString();
+            }
+
+            if (body?.location?.coords is not null)
+            {
+                analytics.Latitude = body!.location!.coords!.latitude;
+                analytics.Longitude = body.location.coords.longitude;
+                analytics.Accuracy = body.location.coords.accuracy;
+            }
+
+            try
+            {
+                var remoteIp = HttpContext.Connection.RemoteIpAddress;
+                if (remoteIp is not null)
+                {
+                    analytics.IpAddress = remoteIp;
+                }
+            }
+            catch { }
+
+            await _db.Analytics.AddAsync(analytics, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            return OkEnvelope(new { message = "Recorded" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error recording link click");
+            return Problem(StatusCodes.Status500InternalServerError, "Internal Server Error", "Could not record click");
+        }
+    }
+
+    /// <summary>
+    /// Returns analytics counts grouped by the authenticated user's links.
+    /// Only the owner may call this endpoint.
+    /// </summary>
+    [HttpGet("my/links")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyLinkCounts(CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated || !Guid.TryParse(UserId, out var uid)) return UnauthorizedProblem();
+
+        var query = from a in _db.Analytics
+                    join l in _db.Links on a.LinkId equals l.Id
+                    where l.UserId == uid
+                    group a by a.LinkId into g
+                    select new { linkId = g.Key, clicks = g.LongCount() };
+
+        var results = await query.ToListAsync(cancellationToken);
+        return OkEnvelope(results);
+    }
+
+    /// <summary>
+    /// Returns recent analytics events for a specific link owned by the authenticated user.
+    /// </summary>
+    [HttpGet("my/link/{linkId:guid}/events")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyLinkEvents([FromRoute] Guid linkId, CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated || !Guid.TryParse(UserId, out var uid)) return UnauthorizedProblem();
+
+        // Verify ownership
+        var link = await _db.Links.FindAsync(new object[] { linkId }, cancellationToken);
+        if (link is null || link.UserId != uid) return ForbiddenProblem("You do not own this link");
+
+        var events = await _db.Analytics
+            .Where(a => a.LinkId == linkId)
+            .OrderByDescending(a => a.At)
+            .Take(100)
+            .Select(a => new { a.Id, a.At, a.Fingerprint, a.Latitude, a.Longitude, a.Accuracy, a.UserAgent })
+            .ToListAsync(cancellationToken);
+
+        return OkEnvelope(events);
     }
 
     /// <summary>

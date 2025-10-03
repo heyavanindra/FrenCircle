@@ -37,7 +37,7 @@ function GroupSection({ id, name, description, items }: { id: string | null; nam
           <div className="flex-1 text-left">
             <div className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${id ? "bg-gradient-to-r from-primary to-blue-500" : "bg-muted-foreground"}`} />
-              <span className="font-semibold">{name}</span>
+              <span className="font-semibold no-underline hover:no-underline">{name}</span>
             </div>
             {description ? <p className="text-xs text-muted-foreground mt-1">{description}</p> : null}
           </div>

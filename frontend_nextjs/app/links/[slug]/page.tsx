@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Globe, ExternalLink, Sun, Moon } from "lucide-react";
+import { Globe, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
 
 // no user guard in public profile view
@@ -29,25 +29,91 @@ const cardVariants = {
 
 /* ---------- Simple (non-sortable) row ---------- */
 function LinkRow({ item }: { item: LinkItem }) {
+  const handleClick = (e: React.MouseEvent) => {
+    // Fire-and-forget analytics: do not prevent default or open window manually.
+    // Read fingerprint from localStorage (fp) - may be null
+    let fp: string | null = null;
+    try {
+      fp = typeof window !== "undefined" ? localStorage.getItem("fp") : null;
+    } catch (err) {
+      fp = null;
+    }
+
+    const basePayload: Record<string, any> = { linkId: item.id, fp };
+
+    const sendPayload = (payloadObj: Record<string, any>) => {
+      const payload = JSON.stringify(payloadObj);
+      try {
+        if (navigator && typeof (navigator as any).sendBeacon === "function") {
+          console.debug("analytics: using sendBeacon", item.id, payloadObj);
+          const blob = new Blob([payload], { type: "application/json" });
+          (navigator as any).sendBeacon(`/link/${item.id}/click`, blob);
+          return;
+        }
+      } catch (err) {
+        console.warn("sendBeacon failed", err);
+      }
+
+      try {
+      console.debug("analytics: using fetch", item.id, payloadObj);
+        fetch(`/link/${item.id}/click`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch((err) => console.warn("Analytics post failed", err));
+      } catch (err) {
+        console.warn("Analytics fallback failed", err);
+      }
+    };
+
+    // Send base payload immediately so it's recorded even if the page unloads quickly
+    try {
+      sendPayload(basePayload);
+    } catch (err) {
+      console.warn("Initial analytics send failed", err);
+    }
+
+    // Attempt to get geolocation asynchronously; if available, send an additional payload with coords.
+    if (typeof navigator !== "undefined" && "geolocation" in navigator) {
+      try {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            try {
+              const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy };
+              sendPayload({ ...basePayload, location: { coords } });
+            } catch (err) {
+              console.warn("Sending analytics with location failed", err);
+            }
+          },
+          () => {
+            // permission denied or timeout - nothing more to do
+          },
+          { maximumAge: 60000, timeout: 2000, enableHighAccuracy: false }
+        );
+      } catch (err) {
+        // geolocation threw - nothing else to do
+      }
+    }
+  };
+
   return (
-    <div className="group/link flex items-center gap-3 rounded-lg border bg-background/60 hover:bg-accent/50 transition-all p-3">
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleClick}
+      className="group/link flex items-center gap-3 rounded-lg border bg-background/60 hover:bg-accent/50 transition-all p-3 block"
+    >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-sm truncate hover:text-primary transition-colors"
-          >
-            {item.name}
-          </a>
-          <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-        </div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm truncate hover:text-primary transition-colors">{item.name}</span>
+          </div>
         {item.description && (
           <p className="text-xs text-muted-foreground mt-1 truncate">{item.description}</p>
         )}
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -70,9 +136,9 @@ function GroupSection({
       <AccordionTrigger className="px-4">
         <div className="flex items-start justify-between w-full gap-3">
           <div className="flex-1 text-left">
-            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${id ? "bg-gradient-to-r from-primary to-blue-500" : "bg-muted-foreground"}`} />
-              <span className="font-semibold">{name}</span>
+              <span className="font-semibold no-underline hover:no-underline">{name}</span>
             </div>
             {description ? <p className="text-xs text-muted-foreground mt-1">{description}</p> : null}
           </div>
