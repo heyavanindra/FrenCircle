@@ -1,0 +1,9 @@
+namespace FrenCircle.Contracts.Responses;
+
+public sealed record UserPublicResponse(
+    Guid Id,
+    string Username,
+    string? FirstName,
+    string? LastName,
+    string? AvatarUrl
+);

@@ -16,6 +16,8 @@ import { useUser } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useGet } from "@/hooks/useApi";
 import { GetGroupedLinksResponse, LinkItem } from "@/hooks/types";
+import { useGet as useGetGeneric } from "@/hooks/useApi";
+import { apiService } from '@/hooks/apiService';
 
 /* ---------- FX presets ---------- */
 const containerVariants = {
@@ -43,27 +45,13 @@ function LinkRow({ item }: { item: LinkItem }) {
 
     const sendPayload = (payloadObj: Record<string, any>) => {
       const payload = JSON.stringify(payloadObj);
+      // Use shared apiService (fire-and-forget) so analytics go through the app API layer.
       try {
-        if (navigator && typeof (navigator as any).sendBeacon === "function") {
-          console.debug("analytics: using sendBeacon", item.id, payloadObj);
-          const blob = new Blob([payload], { type: "application/json" });
-          (navigator as any).sendBeacon(`/link/${item.id}/click`, blob);
-          return;
-        }
+        console.debug('analytics: posting via apiService', item.id, payloadObj);
+        // fire-and-forget; apiService.post will stringify the payload
+        apiService.post(`/link/${item.id}/click`, payloadObj).catch((err) => console.warn('Analytics post failed', err));
       } catch (err) {
-        console.warn("sendBeacon failed", err);
-      }
-
-      try {
-      console.debug("analytics: using fetch", item.id, payloadObj);
-        fetch(`/link/${item.id}/click`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload,
-          keepalive: true,
-        }).catch((err) => console.warn("Analytics post failed", err));
-      } catch (err) {
-        console.warn("Analytics fallback failed", err);
+        console.warn('Analytics post failed', err);
       }
     };
 
@@ -167,6 +155,45 @@ function GroupSection({
   );
 }
 
+/* ---------- User Header ---------- */
+function UserHeader({ username }: { username: string }) {
+  type UserPublic = { id: string; username: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null };
+
+  type GetUserPublicResponse = { data: { id: string; username: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null }; meta: any | null };
+
+  const { data: userData, loading: loadingUser, error: userError } = useGetGeneric<GetUserPublicResponse>(
+    username ? `/user/${encodeURIComponent(username)}/public` : ''
+  );
+
+  if (loadingUser) return null;
+  if (userError) {
+    console.warn("User API error:", userError);
+    return <p className="text-red-500 text-sm">Failed to load user info.</p>;
+  }
+  if (!userData || !userData.data) return null;
+
+  const { firstName, lastName, avatarUrl } = userData.data;
+  const displayName = [firstName, lastName].filter(Boolean).join(" ") || userData.data.username;
+
+  return (
+    <div className="bg-card rounded-lg border overflow-hidden">
+      {/* banner / header placeholder */}
+      <div className="h-28 sm:h-36 w-full bg-gradient-to-r from-primary/8 via-transparent to-primary/8 flex items-center justify-center">
+        {/* optional decorative content could go here */}
+      </div>
+
+      {/* avatar overlapping banner + centered name */}
+      <div className="-mt-10 sm:-mt-12 flex flex-col items-center text-center px-4 pb-4">
+        <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full ring-4 ring-card bg-white overflow-hidden">
+          <img src={avatarUrl ?? '/images/avatar-placeholder.png'} alt={displayName} className="h-full w-full object-cover" />
+        </div>
+        <h2 className="mt-3 text-lg sm:text-xl font-semibold truncate">{displayName}</h2>
+        <p className="text-sm text-muted-foreground">@{userData.data.username}</p>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Main Page (READ-ONLY) ---------- */
 export default function LinksPageViewOnly() {
   const params = useParams();
@@ -228,6 +255,8 @@ export default function LinksPageViewOnly() {
             </Link>
           </div> */}
 
+          {username ? <UserHeader username={username} /> : null}
+
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <Globe className="h-4 w-4 text-primary" />
@@ -253,6 +282,8 @@ export default function LinksPageViewOnly() {
               )}
             </div>
           </div>
+
+          {/* User header shown above the Links title (no duplicate below) */}
 
           {loadingLinks ? (
             <motion.div variants={cardVariants} className="py-16 text-center">
