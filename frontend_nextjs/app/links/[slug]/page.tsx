@@ -7,12 +7,13 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Globe, ExternalLink } from "lucide-react";
+import { Globe, ExternalLink, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
 
 // no user guard in public profile view
 import { useNavbarVisibility } from "@/contexts/NavbarVisibilityContext";
 import { useUser } from "@/contexts/UserContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useGet } from "@/hooks/useApi";
 import { GetGroupedLinksResponse, LinkItem } from "@/hooks/types";
 
@@ -114,6 +115,7 @@ export default function LinksPageViewOnly() {
   // Determine ownership: if the logged-in user's username matches the slug (case-insensitive)
   const { user, isAuthenticated } = useUser();
   const isOwner = isAuthenticated && user?.username && username && user.username.toLowerCase() === username.toLowerCase();
+  const { theme, toggleTheme } = useTheme();
   useEffect(() => {
     const prev = visible;
     setVisible(false);
@@ -168,16 +170,22 @@ export default function LinksPageViewOnly() {
               <h1 className="text-3xl font-bold">Links</h1>
               <p className="text-muted-foreground text-sm">View your links by group.</p>
             </div>
-            {/* Edit action for owner */}
-            {isOwner && (
-              <div className="ml-auto">
-                <Link href="/account/links">
-                  <Button variant="default" size="sm" className="rounded-full">
-                    Edit
-                  </Button>
-                </Link>
-              </div>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+              {/* Theme toggle (visible on public preview even when navbar hidden) */}
+              <Button variant="outline" size="sm" onClick={toggleTheme} className="rounded-full">
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+              {/* Edit action for owner */}
+              {isOwner && (
+                <div>
+                  <Link href="/account/links">
+                    <Button variant="default" size="sm" className="rounded-full">
+                      Edit
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
 
           {loadingLinks ? (
