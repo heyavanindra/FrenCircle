@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,7 +57,7 @@ public class UserRepository : IUserRepository
         await connection.OpenAsync(cancellationToken);
 
         const string query = @"
-            SELECT ""Id"", ""Username"", ""FirstName"", ""LastName"", ""AvatarUrl""
+            SELECT ""Id"", ""Username"", ""FirstName"", ""LastName"", ""AvatarUrl"", ""CoverUrl""
             FROM public.""Users""
             WHERE LOWER(""Username"") = LOWER(@username)
               AND ""DeletedAt"" IS NULL
@@ -77,7 +77,8 @@ public class UserRepository : IUserRepository
             reader.GetString(1),
             reader.IsDBNull(2) ? null : reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetString(3),
-            reader.IsDBNull(4) ? null : reader.GetString(4)
+            reader.IsDBNull(4) ? null : reader.GetString(4),
+            reader.IsDBNull(5) ? null : reader.GetString(5)
         );
     }
 
@@ -94,3 +95,4 @@ public class UserRepository : IUserRepository
         throw new InvalidOperationException(message);
     }
 }
+

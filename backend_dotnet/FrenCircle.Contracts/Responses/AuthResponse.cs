@@ -1,4 +1,4 @@
-namespace FrenCircle.Contracts.Responses;
+﻿namespace FrenCircle.Contracts.Responses;
 
 public sealed record AuthResponse(
     string AccessToken,
@@ -15,6 +15,7 @@ public sealed record UserInfo(
     string? FirstName,
     string? LastName,
     string? AvatarUrl,
+    string? CoverUrl,
     DateTimeOffset CreatedAt,
     IReadOnlyList<string> Roles,
     string? AuthMethod
@@ -40,3 +41,4 @@ public sealed record PasswordResetResponse(
     string Message,
     DateTimeOffset ResetAt
 );
+

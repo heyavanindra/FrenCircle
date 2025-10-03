@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
@@ -44,12 +44,15 @@ export default function ProfilePage() {
     locale: ""
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   // API hooks
   const { data: profileData, loading: profileLoading, error: profileError, refetch: refetchProfile } = useGet<GetProfileResponse>("/profile");
   const { mutate: updateProfile, loading: isUpdating } = usePost<UpdateProfileResponse>("/profile");
   const { mutate: uploadAvatar, loading: isUploadingAvatar } = usePost<UpdateProfileResponse>("/media/avatar");
+  const { mutate: uploadCover, loading: isUploadingCover } = usePost<UpdateProfileResponse>("/media/cover");
 
   // Initialize form data when profile data loads
   useEffect(() => {
@@ -64,6 +67,7 @@ export default function ProfilePage() {
         locale: profile.locale || ""
       });
       setAvatarPreview(null);
+      setCoverPreview(null);
     }
   }, [profileData]);
 
@@ -75,7 +79,7 @@ export default function ProfilePage() {
   };
 
   const handleAvatarButtonClick = () => {
-    fileInputRef.current?.click();
+    avatarInputRef.current?.click();
   };
 
   const handleAvatarSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,6 +120,7 @@ export default function ProfilePage() {
             firstName: updatedProfile.firstName,
             lastName: updatedProfile.lastName,
             avatarUrl: updatedProfile.avatarUrl ?? undefined,
+            coverUrl: updatedProfile.coverUrl ?? undefined,
           });
         }
 
@@ -134,6 +139,73 @@ export default function ProfilePage() {
       }
 
       setAvatarPreview(null);
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      event.target.value = "";
+    }
+  };
+
+  const handleCoverButtonClick = () => {
+    coverInputRef.current?.click();
+  };
+
+  const handleCoverSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    const maxSizeMb = 5;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      toast.error(`Please upload an image smaller than ${maxSizeMb}MB.`);
+      event.target.value = "";
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setCoverPreview(previewUrl);
+
+    const formDataPayload = new FormData();
+    formDataPayload.append("file", file);
+
+    try {
+      const response = await uploadCover(formDataPayload);
+
+      if (response.status === 200 && response.data) {
+        toast.success("Cover image updated successfully!");
+
+        const updatedProfile = response.data.data.profile;
+        if (user) {
+          setUser({
+            ...user,
+            firstName: updatedProfile.firstName,
+            lastName: updatedProfile.lastName,
+            avatarUrl: updatedProfile.avatarUrl ?? undefined,
+            coverUrl: updatedProfile.coverUrl ?? undefined,
+          });
+        }
+
+        await refetchProfile();
+        setCoverPreview(null);
+      }
+    } catch (error: any) {
+      console.error("Cover upload failed:", error);
+
+      if (error?.status && error?.data?.title) {
+        toast.error(error.data.title);
+      } else if (error?.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to upload cover image. Please try again.");
+      }
+
+      setCoverPreview(null);
     } finally {
       URL.revokeObjectURL(previewUrl);
       event.target.value = "";
@@ -182,6 +254,8 @@ export default function ProfilePage() {
             ...user,
             firstName: updatedProfile.firstName,
             lastName: updatedProfile.lastName,
+            avatarUrl: updatedProfile.avatarUrl ?? user.avatarUrl,
+            coverUrl: updatedProfile.coverUrl ?? user.coverUrl,
             // Note: username and email cannot be changed via profile update
           });
         }
@@ -218,6 +292,7 @@ export default function ProfilePage() {
     displayName: user.firstName + " " + user.lastName,
     bio: "",
     avatarUrl: user.avatarUrl,
+    coverUrl: user.coverUrl,
     timezone: "",
     locale: "",
     verifiedBadge: false,
@@ -225,6 +300,8 @@ export default function ProfilePage() {
     updatedAt: new Date().toISOString(),
     roles: user.role ? [user.role] : ["user"]
   };
+
+  const coverImage = coverPreview || displayProfile.coverUrl;
 
   // Only show loading when we don't have any data yet
   if (profileLoading && !profileData && !profileError) {
@@ -276,7 +353,7 @@ export default function ProfilePage() {
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                 <div className="flex items-center">
                   <div className="text-yellow-600 dark:text-yellow-400 text-sm">
-                    ⚠️ Using cached profile data. Some information may not be up to date.
+                    âš ï¸ Using cached profile data. Some information may not be up to date.
                   </div>
                 </div>
               </div>
@@ -334,6 +411,43 @@ export default function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Cover Section */}
+                <div className="relative w-full h-40 overflow-hidden rounded-xl bg-muted">
+                  {coverImage ? (
+                    <img src={coverImage} alt="Cover" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/30" />
+                  )}
+                  {isUploadingCover && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    </div>
+                  )}
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleCoverSelected}
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute bottom-3 right-3 rounded-full h-9 px-4"
+                    onClick={handleCoverButtonClick}
+                    disabled={isUploadingCover}
+                  >
+                    {isUploadingCover ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <div className="flex items-center">
+                        <Camera className="h-4 w-4 mr-2" />
+                        Change Cover
+                      </div>
+                    )}
+                  </Button>
+                </div>
+
                 {/* Avatar Section */}
                 <div className="flex items-center space-x-4">
                   <div className="relative">
@@ -349,7 +463,7 @@ export default function ProfilePage() {
                       </div>
                     )}
                     <input
-                      ref={fileInputRef}
+                      ref={avatarInputRef}
                       type="file"
                       accept="image/*"
                       className="hidden"
@@ -519,3 +633,15 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+

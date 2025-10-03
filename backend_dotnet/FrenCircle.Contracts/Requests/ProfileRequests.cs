@@ -1,4 +1,4 @@
-namespace FrenCircle.Contracts.Requests;
+﻿namespace FrenCircle.Contracts.Requests;
 
 public sealed record UpdateProfileRequest(
     string? FirstName = null,
@@ -6,6 +6,7 @@ public sealed record UpdateProfileRequest(
     string? DisplayName = null,
     string? Bio = null,
     string? AvatarUrl = null,
+    string? CoverUrl = null,
     string? Timezone = null,
     string? Locale = null
 );

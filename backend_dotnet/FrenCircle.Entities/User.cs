@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FrenCircle.Entities;
@@ -32,6 +32,8 @@ public class User
 
     public string? AvatarUrl { get; set; }
 
+    public string? CoverUrl { get; set; }
+
     public string? Timezone { get; set; }
 
     public string? Locale { get; set; }
@@ -58,3 +60,4 @@ public class User
     public ICollection<Link> Links { get; set; } = new List<Link>();
     public ICollection<LinkGroup> LinkGroups { get; set; } = new List<LinkGroup>();
 }
+

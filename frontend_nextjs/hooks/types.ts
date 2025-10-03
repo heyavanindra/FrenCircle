@@ -1,4 +1,4 @@
-// API Types and Interfaces
+﻿// API Types and Interfaces
 export interface ApiConfig {
   baseURL?: string;
   timeout?: number;
@@ -63,6 +63,7 @@ export interface LoginResponse {
       firstName: string;
       lastName: string;
       avatarUrl: string | null;
+      coverUrl: string | null;
       createdAt: string;
       roles: string[];
     };
@@ -95,6 +96,7 @@ export interface SignupResponse {
     firstName: string;
     lastName: string;
     avatarUrl: string | null;
+    coverUrl: string | null;
     createdAt: string;
     roles: string[];
   };
@@ -189,16 +191,17 @@ export interface GoogleCallbackResponse {
   refreshToken: string;
   expiresAt: string;
   user: {
-    id: string;
-    email: string;
-    emailVerified: boolean;
-    username: string;
-    firstName: string;
-    lastName: string;
-    avatarUrl: string | null;
-    createdAt: string;
-    roles: string[];
-  };
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      username: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl: string | null;
+      coverUrl: string | null;
+      createdAt: string;
+      roles: string[];
+    };
 }
 
 // Profile API Types
@@ -212,6 +215,7 @@ export interface ProfileData {
   displayName?: string;
   bio?: string;
   avatarUrl: string | null;
+  coverUrl: string | null;
   timezone?: string;
   locale?: string;
   verifiedBadge: boolean;
@@ -231,6 +235,7 @@ export interface UpdateProfileRequest {
   displayName?: string;
   bio?: string;
   avatarUrl?: string;
+  coverUrl?: string;
   timezone?: string;
   locale?: string;
 }
@@ -370,3 +375,6 @@ export interface GroupResequenceItemRequest {
   id: string;
   sequence: number;
 }
+
+
+

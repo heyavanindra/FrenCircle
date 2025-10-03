@@ -81,7 +81,7 @@ public sealed class MediaController : BaseApiController
 
         try
         {
-            var uploadResult = await UploadFileAsync(file, userId.ToString("N"), cancellationToken);
+            var uploadResult = await UploadFileAsync(file, $"{userId:N}-avatar", cancellationToken);
 
             var updateRequest = new UpdateProfileRequest(AvatarUrl: uploadResult.Url);
             var updateResponse = await _profileRepository.UpdateProfileAsync(userId, updateRequest, cancellationToken);
@@ -102,6 +102,51 @@ public sealed class MediaController : BaseApiController
                 "An unexpected error occurred while uploading the avatar.");
         }
     }
+    /// <summary>
+    /// Uploads a cover image, updates the current user's profile, and returns the updated profile.
+    /// </summary>
+    [HttpPost("cover")]
+    [ProducesResponseType(typeof(ApiResponse<ProfileUpdateResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadCover([FromForm] IFormFile? file, CancellationToken cancellationToken = default)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequestProblem("No file uploaded", "Provide a non-empty file in the request body.");
+        }
+
+        if (!Guid.TryParse(UserId, out var userId))
+        {
+            return UnauthorizedProblem("Unauthorized", "Unable to resolve the current user.");
+        }
+
+        try
+        {
+            var uploadResult = await UploadFileAsync(file, $"{userId:N}-cover", cancellationToken);
+
+            var updateRequest = new UpdateProfileRequest(CoverUrl: uploadResult.Url);
+            var updateResponse = await _profileRepository.UpdateProfileAsync(userId, updateRequest, cancellationToken);
+
+            if (updateResponse is null)
+            {
+                return NotFoundProblem("User not found", "Unable to update the cover image for the current user.");
+            }
+
+            return OkEnvelope(updateResponse, new { uploadResult.PublicId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Cover upload failed for user {UserId}", UserId);
+            return Problem(
+                StatusCodes.Status500InternalServerError,
+                "Cover upload failed",
+                "An unexpected error occurred while uploading the cover image.");
+        }
+    }
+
+
 
     /// <summary>
     /// Uploads a file to Cloudinary and caches it locally.
@@ -166,3 +211,4 @@ public sealed class MediaController : BaseApiController
         }
     }
 }
+

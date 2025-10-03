@@ -1,4 +1,4 @@
-namespace FrenCircle.Contracts.Responses;
+﻿namespace FrenCircle.Contracts.Responses;
 
 public sealed record ProfileDetailsResponse(
     Guid Id,
@@ -10,6 +10,7 @@ public sealed record ProfileDetailsResponse(
     string? DisplayName,
     string? Bio,
     string? AvatarUrl,
+    string? CoverUrl,
     string? Timezone,
     string? Locale,
     bool VerifiedBadge,
@@ -52,3 +53,4 @@ public sealed record AccountDeleteResponse(
     string Message,
     DateTimeOffset DeletedAt
 );
+

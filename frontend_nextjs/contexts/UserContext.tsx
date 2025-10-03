@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
 
@@ -121,7 +121,7 @@ export function UserProvider({ children }: UserProviderProps) {
         // This handles cases where localStorage was cleared but HTTP-only cookies remain
         const hasRefreshTokenCookie = document.cookie.includes('refreshToken=');
         if (hasRefreshTokenCookie) {
-          console.log('🍪 Refresh token cookie found but no local user data - attempting session restore');
+          console.log('ðŸª Refresh token cookie found but no local user data - attempting session restore');
           
           // Attempt to restore the session proactively
           try {
@@ -137,6 +137,7 @@ export function UserProvider({ children }: UserProviderProps) {
                 username: userData.username || '',
                 email: userData.email || '',
                 avatarUrl: userData.avatarUrl,
+                coverUrl: userData.coverUrl,
                 login: true,
                 expiry: undefined, // Will be set from token expiry
                 role: userData.roles?.[0] || 'user',
@@ -358,3 +359,4 @@ export const userHelpers = {
     }
   }
 };
+

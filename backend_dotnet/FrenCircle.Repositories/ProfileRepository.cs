@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using FrenCircle.Contracts.Interfaces;
 using FrenCircle.Contracts.Requests;
 using FrenCircle.Contracts.Responses;
@@ -29,7 +29,7 @@ public class ProfileRepository : IProfileRepository
 
         const string userQuery = @"
             SELECT ""Id"", ""Email"", ""EmailVerified"", ""Username"", ""FirstName"", ""LastName"",
-                   ""DisplayName"", ""Bio"", ""AvatarUrl"", ""Timezone"", ""Locale"",
+                   ""DisplayName"", ""Bio"", ""AvatarUrl"", ""CoverUrl"", ""Timezone"", ""Locale"",
                    ""VerifiedBadge"", ""CreatedAt"", ""UpdatedAt""
             FROM public.""Users""
             WHERE ""Id"" = @userId
@@ -56,9 +56,10 @@ public class ProfileRepository : IProfileRepository
             reader.IsDBNull(8) ? null : reader.GetString(8),
             reader.IsDBNull(9) ? null : reader.GetString(9),
             reader.IsDBNull(10) ? null : reader.GetString(10),
-            reader.GetBoolean(11),
-            reader.GetFieldValue<DateTimeOffset>(12),
+            reader.IsDBNull(11) ? null : reader.GetString(11),
+            reader.GetBoolean(12),
             reader.GetFieldValue<DateTimeOffset>(13),
+            reader.GetFieldValue<DateTimeOffset>(14),
             Array.Empty<string>());
 
         await reader.CloseAsync();
@@ -90,7 +91,7 @@ public class ProfileRepository : IProfileRepository
 
         const string selectQuery = @"
             SELECT ""Id"", ""Email"", ""EmailVerified"", ""Username"", ""FirstName"", ""LastName"",
-                   ""DisplayName"", ""Bio"", ""AvatarUrl"", ""Timezone"", ""Locale"",
+                   ""DisplayName"", ""Bio"", ""AvatarUrl"", ""CoverUrl"", ""Timezone"", ""Locale"",
                    ""VerifiedBadge"", ""CreatedAt"", ""UpdatedAt""
             FROM public.""Users""
             WHERE ""Id"" = @userId
@@ -118,10 +119,11 @@ public class ProfileRepository : IProfileRepository
             DisplayName = reader.IsDBNull(6) ? null : reader.GetString(6),
             Bio = reader.IsDBNull(7) ? null : reader.GetString(7),
             AvatarUrl = reader.IsDBNull(8) ? null : reader.GetString(8),
-            Timezone = reader.IsDBNull(9) ? null : reader.GetString(9),
-            Locale = reader.IsDBNull(10) ? null : reader.GetString(10),
-            VerifiedBadge = reader.GetBoolean(11),
-            CreatedAt = reader.GetFieldValue<DateTimeOffset>(12)
+            CoverUrl = reader.IsDBNull(9) ? null : reader.GetString(9),
+            Timezone = reader.IsDBNull(10) ? null : reader.GetString(10),
+            Locale = reader.IsDBNull(11) ? null : reader.GetString(11),
+            VerifiedBadge = reader.GetBoolean(12),
+            CreatedAt = reader.GetFieldValue<DateTimeOffset>(13)
         };
 
         await reader.CloseAsync();
@@ -135,6 +137,7 @@ public class ProfileRepository : IProfileRepository
         var displayName = request.DisplayName is null ? current.DisplayName : Sanitize(request.DisplayName);
         var bio = request.Bio is null ? current.Bio : Sanitize(request.Bio);
         var avatarUrl = request.AvatarUrl is null ? current.AvatarUrl : Sanitize(request.AvatarUrl);
+        var coverUrl = request.CoverUrl is null ? current.CoverUrl : Sanitize(request.CoverUrl);
         var timezone = request.Timezone is null ? current.Timezone : Sanitize(request.Timezone);
         var locale = request.Locale is null ? current.Locale : Sanitize(request.Locale);
 
@@ -145,6 +148,7 @@ public class ProfileRepository : IProfileRepository
                 ""DisplayName"" = @displayName,
                 ""Bio"" = @bio,
                 ""AvatarUrl"" = @avatarUrl,
+                ""CoverUrl"" = @coverUrl,
                 ""Timezone"" = @timezone,
                 ""Locale"" = @locale,
                 ""UpdatedAt"" = @updatedAt
@@ -156,6 +160,7 @@ public class ProfileRepository : IProfileRepository
         updateCommand.Parameters.Add("displayName", NpgsqlDbType.Text).Value = (object?)displayName ?? DBNull.Value;
         updateCommand.Parameters.Add("bio", NpgsqlDbType.Text).Value = (object?)bio ?? DBNull.Value;
         updateCommand.Parameters.Add("avatarUrl", NpgsqlDbType.Text).Value = (object?)avatarUrl ?? DBNull.Value;
+        updateCommand.Parameters.Add("coverUrl", NpgsqlDbType.Text).Value = (object?)coverUrl ?? DBNull.Value;
         updateCommand.Parameters.Add("timezone", NpgsqlDbType.Text).Value = (object?)timezone ?? DBNull.Value;
         updateCommand.Parameters.Add("locale", NpgsqlDbType.Text).Value = (object?)locale ?? DBNull.Value;
         updateCommand.Parameters.Add("updatedAt", NpgsqlDbType.TimestampTz).Value = updatedAt;
@@ -193,6 +198,7 @@ public class ProfileRepository : IProfileRepository
             displayName,
             bio,
             avatarUrl,
+            coverUrl,
             timezone,
             locale,
             current.VerifiedBadge,
@@ -604,6 +610,7 @@ public class ProfileRepository : IProfileRepository
                 ""DisplayName"" = NULL,
                 ""Bio"" = NULL,
                 ""AvatarUrl"" = NULL,
+                ""CoverUrl"" = NULL,
                 ""UpdatedAt"" = @deletedAt
             WHERE ""Id"" = @userId;";
 
@@ -701,3 +708,11 @@ public class ProfileRepository : IProfileRepository
         throw new InvalidOperationException(message);
     }
 }
+
+
+
+
+
+
+
+

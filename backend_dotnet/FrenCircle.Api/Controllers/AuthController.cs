@@ -1,4 +1,4 @@
-using BCrypt.Net;
+﻿using BCrypt.Net;
 using FrenCircle.Api.Configuration;
 using FrenCircle.Api.Data;
 using FrenCircle.Api.Services;
@@ -1387,6 +1387,7 @@ public sealed class AuthController : BaseApiController
             FirstName: firstName,
             LastName: lastName,
             AvatarUrl: user.AvatarUrl,
+            CoverUrl: user.CoverUrl,
             CreatedAt: user.CreatedAt,
             Roles: roles,
             AuthMethod: authMethod
