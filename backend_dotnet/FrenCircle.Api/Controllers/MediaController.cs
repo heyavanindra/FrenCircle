@@ -81,7 +81,7 @@ public sealed class MediaController : BaseApiController
 
         try
         {
-            var uploadResult = await UploadFileAsync(file, cancellationToken);
+            var uploadResult = await UploadFileAsync(file, userId.ToString("N"), cancellationToken);
 
             var updateRequest = new UpdateProfileRequest(AvatarUrl: uploadResult.Url);
             var updateResponse = await _profileRepository.UpdateProfileAsync(userId, updateRequest, cancellationToken);
@@ -106,13 +106,17 @@ public sealed class MediaController : BaseApiController
     /// <summary>
     /// Uploads a file to Cloudinary and caches it locally.
     /// </summary>
-    private async Task<CloudinaryUploadResult> UploadFileAsync(IFormFile file, CancellationToken cancellationToken)
+    private Task<CloudinaryUploadResult> UploadFileAsync(IFormFile file, CancellationToken cancellationToken)
+        => UploadFileAsync(file, null, cancellationToken);
+
+    private async Task<CloudinaryUploadResult> UploadFileAsync(IFormFile file, string? publicId, CancellationToken cancellationToken)
     {
         await using var stream = file.OpenReadStream();
         return await _cloudinaryService.UploadImageAsync(
             stream,
             file.FileName,
             string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+            publicId,
             cancellationToken);
     }
 

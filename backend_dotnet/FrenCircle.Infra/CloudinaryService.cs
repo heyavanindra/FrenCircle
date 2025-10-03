@@ -47,6 +47,7 @@ namespace FrenCircle.Infra
             Stream fileStream,
             string fileName,
             string contentType,
+            string? publicId = null,
             CancellationToken cancellationToken = default)
         {
             if (fileStream is null)
@@ -66,6 +67,7 @@ namespace FrenCircle.Infra
                 fileBytes = buffer.ToArray();
             }
 
+            var isDeterministicPublicId = !string.IsNullOrWhiteSpace(publicId);
             await using var uploadStream = new MemoryStream(fileBytes, writable: false);
 
             var uploadParams = new ImageUploadParams
@@ -73,9 +75,15 @@ namespace FrenCircle.Infra
                 File = new FileDescription(fileName, uploadStream),
                 Folder = string.IsNullOrWhiteSpace(_settings.Folder) ? null : _settings.Folder,
                 UseFilename = false,
-                UniqueFilename = true,
-                Overwrite = false
+                UniqueFilename = !isDeterministicPublicId,
+                Overwrite = isDeterministicPublicId,
+                Invalidate = isDeterministicPublicId
             };
+
+            if (isDeterministicPublicId)
+            {
+                uploadParams.PublicId = publicId;
+            }
 
             var uploadResult = await _cloudinary.UploadAsync(uploadParams, cancellationToken);
 
@@ -85,19 +93,20 @@ namespace FrenCircle.Infra
                 throw new InvalidOperationException($"Cloudinary upload failed: {uploadResult.Error.Message}");
             }
 
-            var publicId = uploadResult.PublicId;
+            var effectivePublicId = uploadResult.PublicId;
             var extension = ResolveExtension(uploadResult.Format, contentType);
-            var localPath = BuildLocalPath(publicId, extension);
+            ClearCachedFiles(effectivePublicId);
+            var localPath = BuildLocalPath(effectivePublicId, extension);
 
             await using (var localFile = new FileStream(localPath, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 await localFile.WriteAsync(fileBytes, cancellationToken);
             }
 
-            _logger.LogInformation("Image {PublicId} uploaded to Cloudinary and cached at {LocalPath}", publicId, localPath);
+            _logger.LogInformation("Image {PublicId} uploaded to Cloudinary and cached at {LocalPath}", effectivePublicId, localPath);
 
             var url = uploadResult.SecureUrl?.ToString() ?? uploadResult.Url?.ToString() ?? string.Empty;
-            return new CloudinaryUploadResult(publicId, url, localPath);
+            return new CloudinaryUploadResult(effectivePublicId, url, localPath);
         }
 
         public async Task<CachedImageResult?> GetImageAsync(string publicId, CancellationToken cancellationToken = default)
@@ -154,6 +163,33 @@ namespace FrenCircle.Infra
             _logger.LogInformation("Cached Cloudinary resource {PublicId} to {LocalPath}", publicId, localPath);
 
             return new CachedImageResult(localPath, contentType ?? "application/octet-stream", Path.GetFileName(localPath));
+        }
+
+        private void ClearCachedFiles(string publicId)
+        {
+            var safeId = SanitizePublicId(publicId);
+            var searchPattern = $"{safeId}.*";
+
+            try
+            {
+                var matches = Directory.GetFiles(_cacheDirectory, searchPattern, SearchOption.TopDirectoryOnly);
+
+                foreach (var match in matches)
+                {
+                    try
+                    {
+                        File.Delete(match);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to remove cached image {CachedPath} while refreshing {PublicId}", match, publicId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enumerate cached files for {PublicId}", publicId);
+            }
         }
 
         private string? FindCachedFile(string publicId)

@@ -2,7 +2,7 @@
 {
     public interface ICloudinaryService
     {
-        Task<CloudinaryUploadResult> UploadImageAsync(Stream fileStream, string fileName, string contentType, CancellationToken cancellationToken = default);
+        Task<CloudinaryUploadResult> UploadImageAsync(Stream fileStream, string fileName, string contentType, string? publicId = null, CancellationToken cancellationToken = default);
         Task<CachedImageResult?> GetImageAsync(string publicId, CancellationToken cancellationToken = default);
     }
 
@@ -10,3 +10,4 @@
 
     public sealed record CachedImageResult(string FilePath, string ContentType, string FileName);
 }
+
