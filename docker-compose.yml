@@ -9,7 +9,8 @@ services:
       - .env
     volumes:
       - /home/jassi/deployments/FrenCircleMonoRepo/logs/dotnet:/app/logs/dotnet
-
+      - /home/jassi/deployments/FrenCircleMonoRepo/cache:/app/cache
+      
   fastapi:
     build:
       context: ./backend_fastapi
