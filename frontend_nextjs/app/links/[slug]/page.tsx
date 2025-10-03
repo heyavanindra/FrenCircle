@@ -157,9 +157,9 @@ function GroupSection({
 
 /* ---------- User Header ---------- */
 function UserHeader({ username }: { username: string }) {
-  type UserPublic = { id: string; username: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null };
+  type UserPublic = { id: string; username: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null; coverUrl?: string | null };
 
-  type GetUserPublicResponse = { data: { id: string; username: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null }; meta: any | null };
+  type GetUserPublicResponse = { data: { id: string; username: string; firstName?: string | null; lastName?: string | null; avatarUrl?: string | null; coverUrl?: string | null }; meta: any | null };
 
   const { data: userData, loading: loadingUser, error: userError } = useGetGeneric<GetUserPublicResponse>(
     username ? `/user/${encodeURIComponent(username)}/public` : ''
@@ -172,14 +172,18 @@ function UserHeader({ username }: { username: string }) {
   }
   if (!userData || !userData.data) return null;
 
-  const { firstName, lastName, avatarUrl } = userData.data;
+  const { firstName, lastName, avatarUrl, coverUrl } = userData.data;
   const displayName = [firstName, lastName].filter(Boolean).join(" ") || userData.data.username;
 
   return (
     <div className="bg-card rounded-lg border overflow-hidden">
       {/* banner / header placeholder */}
-      <div className="h-28 sm:h-36 w-full bg-gradient-to-r from-primary/8 via-transparent to-primary/8 flex items-center justify-center">
-        {/* optional decorative content could go here */}
+      <div className="h-28 sm:h-36 w-full overflow-hidden bg-gradient-to-r from-primary/8 via-transparent to-primary/8">
+        {coverUrl ? (
+          <img src={coverUrl} alt="Cover image" className="h-full w-full object-cover" />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-r from-primary/10 via-background to-primary/10" />
+        )}
       </div>
 
       {/* avatar overlapping banner + centered name */}
@@ -331,3 +335,6 @@ export default function LinksPageViewOnly() {
     </div>
   );
 }
+
+
+

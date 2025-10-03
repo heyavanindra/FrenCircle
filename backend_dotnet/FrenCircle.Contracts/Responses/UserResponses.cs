@@ -1,4 +1,4 @@
-﻿namespace FrenCircle.Contracts.Responses;
+namespace FrenCircle.Contracts.Responses;
 
 public sealed record UserPublicResponse(
     Guid Id,
@@ -8,4 +8,3 @@ public sealed record UserPublicResponse(
     string? AvatarUrl,
     string? CoverUrl
 );
-
