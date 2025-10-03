@@ -809,7 +809,23 @@ export default function LinksPage() {
                           <div className="text-lg font-semibold">Preview</div>
                           <Button size="sm" variant="ghost" onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
                         </div>
-                        <LinksPreview groups={localGroups} ungrouped={localUngrouped} />
+                        {/* Build header node and pass into LinksPreview so it renders inside the mock */}
+                        {(() => {
+                          const headerNode = user ? (
+                            <div>
+                              <div className="h-20 w-full bg-gradient-to-r from-primary/8 via-transparent to-primary/8 rounded-t-xl flex items-center justify-center" />
+                              <div className="-mt-8 flex flex-col items-center text-center px-4 pb-2">
+                                <div className="h-14 w-14 rounded-full ring-4 ring-card bg-white overflow-hidden">
+                                  <img src={user.avatarUrl ?? '/images/avatar-placeholder.png'} alt={user.username} className="h-full w-full object-cover" />
+                                </div>
+                                <h3 className="mt-2 text-sm font-semibold truncate">{[user.firstName, user.lastName].filter(Boolean).join(' ') || user.username}</h3>
+                                <p className="text-xs text-muted-foreground">@{user.username}</p>
+                              </div>
+                            </div>
+                          ) : null;
+
+                          return <LinksPreview groups={localGroups} ungrouped={localUngrouped} header={headerNode} />;
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -818,7 +834,23 @@ export default function LinksPage() {
             </AnimatePresence>
 
             <div className="hidden lg:block lg:col-span-1">
-              <LinksPreview groups={localGroups} ungrouped={localUngrouped} />
+              {/* Desktop preview: pass the same header into the mock so header appears inside the mock above the links */}
+              {(() => {
+                const headerNode = user ? (
+                  <div>
+                    <div className="h-20 w-full bg-gradient-to-r from-primary/8 via-transparent to-primary/8 rounded-t-xl flex items-center justify-center" />
+                    <div className="-mt-8 flex flex-col items-center text-center px-4 pb-2">
+                      <div className="h-14 w-14 rounded-full ring-4 ring-card bg-white overflow-hidden">
+                        <img src={user.avatarUrl ?? '/images/avatar-placeholder.png'} alt={user.username} className="h-full w-full object-cover" />
+                      </div>
+                      <h3 className="mt-2 text-sm font-semibold truncate">{[user.firstName, user.lastName].filter(Boolean).join(' ') || user.username}</h3>
+                      <p className="text-xs text-muted-foreground">@{user.username}</p>
+                    </div>
+                  </div>
+                ) : null;
+
+                return <LinksPreview groups={localGroups} ungrouped={localUngrouped} header={headerNode} />;
+              })()}
             </div>
           </div>
         </motion.div>

@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import AccessDenied from "@/components/AccessDenied";
-import { 
-  ArrowLeft, 
-  BarChart3, 
-  Users, 
-  MessageSquare, 
+import {
+  ArrowLeft,
+  BarChart3,
+  Users,
+  MessageSquare,
   Activity,
   TrendingUp,
   Calendar,
@@ -116,7 +116,7 @@ export default function InsightsPage() {
     })();
 
     return () => { mounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -130,7 +130,7 @@ export default function InsightsPage() {
         >
           {/* Back Navigation */}
           <motion.div variants={itemVariants}>
-            <Link 
+            <Link
               href="/account/profile"
               className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -166,50 +166,57 @@ export default function InsightsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center p-6 rounded-lg border bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
                     <MessageSquare className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{loadingLinks ? '...' : linksCount}</div>
+                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                      {loadingLinks ? '...' : linksCount}
+                    </div>
                     <div className="text-sm text-blue-600 dark:text-blue-400">Links</div>
-                    <div className="text-xs text-muted-foreground mt-2">Total clicks: <span className="font-medium">{loadingLinkCounts ? '...' : totalClicks}</span></div>
+                  </div>
+                  {/* Total Clicks */}
+                  <div className="text-center p-6 rounded-lg border bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                    <Heart className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                      {loadingLinkCounts ? '...' : totalClicks}
+                    </div>
+                    <div className="text-sm text-purple-600 dark:text-purple-400">Total Clicks</div>
 
-                    {/* Top link breakdown (up to 3) */}
-                    {(!loadingLinkCounts && parsedLinkCounts && parsedLinkCounts.length > 0) && (
-                      (() => {
-                        try {
-                          const resp = (linksResp && (linksResp as any).data) ? (linksResp as any).data : linksResp ?? {};
-                          const groups = (resp && resp.groups) ? resp.groups : (resp?.groups ?? []);
-                          const ungrouped = (resp && resp.ungrouped) ? resp.ungrouped : (resp?.ungrouped ?? { links: [] });
-                          const linksArr = ([] as any[]).concat(...(groups.map((g: any) => g.links ?? [])), ungrouped.links ?? []);
+                    {/* Top link breakdown (up to 3) moved here */}
+                    {(!loadingLinkCounts && parsedLinkCounts && parsedLinkCounts.length > 0) && (() => {
+                      try {
+                        const resp = (linksResp && (linksResp as any).data) ? (linksResp as any).data : linksResp ?? {};
+                        const groups = (resp && resp.groups) ? resp.groups : (resp?.groups ?? []);
+                        const ungrouped = (resp && resp.ungrouped) ? resp.ungrouped : (resp?.ungrouped ?? { links: [] });
+                        const linksArr = ([] as any[]).concat(...(groups.map((g: any) => g.links ?? [])), ungrouped.links ?? []);
 
-                          const mapped = (parsedLinkCounts as any[]).map((c) => {
+                        const mapped = (parsedLinkCounts as any[])
+                          .map((c) => {
                             const link = linksArr.find((l: any) => l.id === c.linkId);
                             return { name: link ? link.name : c.linkId, clicks: c.clicks };
-                          }).sort((a, b) => (b.clicks || 0) - (a.clicks || 0)).slice(0, 3);
+                          })
+                          .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+                          .slice(0, 3);
 
-                          return (
-                            <div className="mt-3 text-left text-xs space-y-1">
-                              {mapped.map((m) => (
-                                <div key={m.name} className="flex items-center justify-between">
-                                  <span className="truncate text-muted-foreground">{m.name}</span>
-                                  <span className="font-medium">{m.clicks}</span>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        } catch (err) {
-                          return null;
-                        }
-                      })()
-                    )}
+                        return (
+                          <div className="mt-3 text-left text-xs space-y-1">
+                            {mapped.map((m) => (
+                              <div key={m.name} className="flex items-center justify-between">
+                                <span className="truncate text-muted-foreground">{m.name}</span>
+                                <span className="font-medium">{m.clicks}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      } catch {
+                        return null;
+                      }
+                    })()}
                   </div>
+
                   <div className="text-center p-6 rounded-lg border bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
                     <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
                     <div className="text-2xl font-bold text-green-700 dark:text-green-300">0</div>
                     <div className="text-sm text-green-600 dark:text-green-400">Friends</div>
                   </div>
-                  <div className="text-center p-6 rounded-lg border bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
-                    <Heart className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                    <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">0</div>
-                    <div className="text-sm text-purple-600 dark:text-purple-400">Total Clicks</div>
-                  </div>
+
                   <div className="text-center p-6 rounded-lg border bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
                     <Calendar className="h-8 w-8 text-orange-600 mx-auto mb-2" />
                     <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">{daysActive ?? '...'}</div>
@@ -221,103 +228,6 @@ export default function InsightsPage() {
           </motion.div>
 
           {/* Engagement Metrics */}
-          <motion.div variants={itemVariants}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Clock className="h-5 w-5 mr-2" />
-                    Recent Activity
-                  </CardTitle>
-                  <CardDescription>
-                    Your latest interactions and posts
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No recent activity</p>
-                      <p className="text-sm">Start engaging with the community!</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Engagement Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2" />
-                    Engagement
-                  </CardTitle>
-                  <CardDescription>
-                    How others interact with your content
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center space-x-3">
-                        <Eye className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm">Profile Views</span>
-                      </div>
-                      <Badge variant="secondary">0</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center space-x-3">
-                        <Heart className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm">Total Likes</span>
-                      </div>
-                      <Badge variant="secondary">0</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center space-x-3">
-                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm">Comments</span>
-                      </div>
-                      <Badge variant="secondary">0</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </motion.div>
-
-          {/* Monthly Summary */}
-          <motion.div variants={itemVariants}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart3 className="h-5 w-5 mr-2" />
-                  This Month&apos;s Summary
-                </CardTitle>
-                <CardDescription>
-                  Your activity breakdown for {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-primary mb-2">0</div>
-                    <div className="text-sm text-muted-foreground mb-1">Posts Created</div>
-                    <div className="text-xs text-green-600">+0% from last month</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-primary mb-2">0</div>
-                    <div className="text-sm text-muted-foreground mb-1">New Connections</div>
-                    <div className="text-xs text-green-600">+0% from last month</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-primary mb-2">1</div>
-                    <div className="text-sm text-muted-foreground mb-1">Active Days</div>
-                    <div className="text-xs text-green-600">+100% from last month</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
 
           {/* Action Items */}
           <motion.div variants={itemVariants}>
@@ -400,7 +310,7 @@ function AnalyticsOverview({ countsProp }: { countsProp?: Array<{ linkId: string
     if (!countsSource || !linksResp) return;
 
     try {
-  const counts = (countsSource && (countsSource as any).data) ? (countsSource as any).data : countsSource ?? [];
+      const counts = (countsSource && (countsSource as any).data) ? (countsSource as any).data : countsSource ?? [];
       const groups = (linksResp && (linksResp as any).data && (linksResp as any).data.groups) ? (linksResp as any).data.groups : (linksResp?.groups ?? []);
       const ungrouped = (linksResp && (linksResp as any).data && (linksResp as any).data.ungrouped) ? (linksResp as any).data.ungrouped : (linksResp?.ungrouped ?? { links: [] });
       const links = ([] as any[]).concat(...(groups.map((g: any) => g.links ?? [])), ungrouped.links ?? []);
@@ -560,7 +470,7 @@ function DeviceUsage() {
       <h3 className="text-lg font-medium mb-2 flex items-center gap-2">Device Usage</h3>
       <div className="p-4 rounded-lg border bg-muted/50">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/> Loading...</div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
         ) : error ? (
           <div className="text-sm text-red-500">{error}</div>
         ) : data ? (

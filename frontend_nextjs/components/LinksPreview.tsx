@@ -66,7 +66,7 @@ function GroupSection({ id, name, description, items }: { id: string | null; nam
   );
 }
 
-export default function LinksPreview({ groups, ungrouped }: { groups: { id: string; name: string; description?: string | null; links: LinkItem[] }[]; ungrouped: LinkItem[] }) {
+export default function LinksPreview({ groups, ungrouped, header }: { groups: { id: string; name: string; description?: string | null; links: LinkItem[] }[]; ungrouped: LinkItem[]; header?: React.ReactNode }) {
   // groups array comes pre-ordered from the parent (account page manages order).
   // Keep the incoming order and only ensure links inside groups are sorted by their sequence.
   const sortedGroups = useMemo(() => {
@@ -80,30 +80,24 @@ export default function LinksPreview({ groups, ungrouped }: { groups: { id: stri
   return (
     <div className="w-full flex justify-center">
   {/* iPhone mock (reduced height) */}
-  <div className="relative rounded-[48px] border-2 border-primary bg-primary/10 shadow-2xl overflow-hidden" style={{ width: 380, height: 700 }}>
-        {/* Top sensor housing / speaker */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full" style={{ width: 140, height: 10, backgroundColor: 'rgba(59,130,246,0.25)' }} />
+  <div className="relative rounded-[36px] border-[1.5px] border-accent bg-accent/10 shadow-2xl overflow-hidden" style={{ width: 380, height: 700 }}>
+  {/* Top sensor housing / speaker (follow accent) */}
+  <div className="absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent/25" style={{ width: 120, height: 8 }} />
 
-        {/* Inner screen */}
-        <div className="absolute inset-6 bg-white rounded-[28px] overflow-hidden flex flex-col" style={{ boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.03)' }}>
-          {/* In-phone navbar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'rgba(99,102,241,0.24)', background: 'linear-gradient(180deg, rgba(59,130,246,1), rgba(59,130,246,0.9))' }}>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Globe className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-white">Links</div>
-                <div className="text-xs text-white/80">Preview</div>
-              </div>
-            </div>
-            <div>
-              {/* optional action (keeps parity with slug page Edit when owner) */}
+  {/* Inner screen (use accent so the mock follows the project's accent color) */}
+  <div className="absolute inset-5 bg-accent rounded-[20px] overflow-hidden flex flex-col" style={{ boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.03)' }}>
+          {/* In-phone navbar: simplified to only 'Preview' and follow accent */}
+          <div className="flex items-center justify-center px-4 py-2 border-b bg-accent text-accent-foreground">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Globe className="h-4 w-4" />
+              <span>Preview</span>
             </div>
           </div>
 
           {/* Scrollable content area */}
           <div className="p-3 overflow-y-auto flex-1 bg-background links-preview-scroll">
+            {/* Optional header injected from parent - renders inside the mock above the links */}
+            {header ? <div className="mb-3">{header}</div> : null}
             <Accordion type="multiple" defaultValue={[...sortedGroups.map((g) => g.id), "__ungrouped__"]} className="space-y-3">
               <GroupSection id={null} name="Ungrouped" description="Links without a group" items={sortedUngrouped} />
               {sortedGroups.map((g) => (
