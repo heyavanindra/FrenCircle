@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FrenCircle.Contracts.Responses;
 
-namespace FrenCircle.Contracts.Interfaces
+namespace FrenCircle.Contracts.Interfaces;
+
+public interface IUserRepository
 {
-    public interface IUserRepository
-    {
-        Task<int> GetUserCountAsync(CancellationToken cancellationToken = default);
-    }
+    Task<int> GetUserCountAsync(CancellationToken cancellationToken = default);
+    Task<UserPublicResponse?> GetPublicByUsernameAsync(string username, CancellationToken cancellationToken = default);
 }

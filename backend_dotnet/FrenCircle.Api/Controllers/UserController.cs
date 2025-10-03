@@ -1,10 +1,9 @@
-using FrenCircle.Api.Data;
+using FrenCircle.Contracts.Interfaces;
 using FrenCircle.Contracts.Responses;
 using FrenCircle.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 
 namespace FrenCircle.Api.Controllers;
 
@@ -12,13 +11,13 @@ namespace FrenCircle.Api.Controllers;
 [ApiController]
 public class UserController : BaseApiController
 {
-    private readonly FrenCircleDbContext _context;
+    private readonly IUserRepository _userRepository;
     private readonly ILogger<UserController> _logger;
 
-    public UserController(ILogger<UserController> logger, FrenCircleDbContext context)
+    public UserController(ILogger<UserController> logger, IUserRepository userRepository)
     {
         _logger = logger;
-        _context = context;
+        _userRepository = userRepository;
     }
 
     /// <summary>
@@ -32,24 +31,13 @@ public class UserController : BaseApiController
     {
         try
         {
-            var usernameNorm = (username ?? string.Empty).Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(usernameNorm)) return NotFoundProblem("User not found");
+            var normalized = (username ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(normalized)) return NotFoundProblem("User not found");
 
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Username.ToLower() == usernameNorm, cancellationToken);
-
+            var user = await _userRepository.GetPublicByUsernameAsync(normalized, cancellationToken);
             if (user == null) return NotFoundProblem("User not found");
 
-            var response = new UserPublicResponse(
-                Id: user.Id,
-                Username: user.Username,
-                FirstName: user.FirstName,
-                LastName: user.LastName,
-                AvatarUrl: user.AvatarUrl
-            );
-
-            return OkEnvelope(response);
+            return OkEnvelope(user);
         }
         catch (Exception ex)
         {
