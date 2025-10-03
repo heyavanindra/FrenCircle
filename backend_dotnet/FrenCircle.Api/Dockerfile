@@ -44,6 +44,11 @@ USER root
 RUN mkdir -p /app/logs/dotnet && chown -R ${APP_UID}:${APP_UID} /app/logs
 USER ${APP_UID}
 
+USER root
+RUN mkdir -p /app/logs/dotnet /app/cache \
+    && chown -R ${APP_UID}:${APP_UID} /app/logs /app/cache
+USER ${APP_UID}
+
 # Build
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
