@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 // no user guard in public profile view
 import { useNavbarVisibility } from "@/contexts/NavbarVisibilityContext";
+import { useUser } from "@/contexts/UserContext";
 import { useGet } from "@/hooks/useApi";
 import { GetGroupedLinksResponse, LinkItem } from "@/hooks/types";
 
@@ -112,6 +113,10 @@ export default function LinksPageViewOnly() {
 
   // Hide navbar while this page is mounted using in-memory context (no persistence).
   const { visible, setVisible } = useNavbarVisibility();
+
+  // Determine ownership: if the logged-in user's username matches the slug (case-insensitive)
+  const { user, isAuthenticated } = useUser();
+  const isOwner = isAuthenticated && user?.username && username && user.username.toLowerCase() === username.toLowerCase();
   useEffect(() => {
     const prev = visible;
     setVisible(false);
@@ -166,7 +171,16 @@ export default function LinksPageViewOnly() {
               <h1 className="text-3xl font-bold">Links</h1>
               <p className="text-muted-foreground text-sm">View your links by group.</p>
             </div>
-            {/* No actions on the right in view-only mode */}
+            {/* Edit action for owner */}
+            {isOwner && (
+              <div className="ml-auto">
+                <Link href="/account/links">
+                  <Button variant="default" size="sm" className="rounded-full">
+                    Edit
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
 
           {loadingLinks ? (
