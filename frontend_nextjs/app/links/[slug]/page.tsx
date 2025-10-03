@@ -5,12 +5,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
-// public profile view - no AccessDenied
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Input } from "@/components/ui/input"; // (not used; remove if you want)
-import { ArrowLeft, Globe, ExternalLink } from "lucide-react";
+import { Globe, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 // no user guard in public profile view

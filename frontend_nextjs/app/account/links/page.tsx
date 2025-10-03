@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import LinksPreview from "@/components/LinksPreview";
 import {
   DndContext,
   DragOverlay,
@@ -352,14 +353,14 @@ export default function LinksPage() {
       meta.from === "ungrouped" ? localUngrouped[meta.index] : localGroups.find((g) => g.id === meta.groupId)!.links[meta.index];
   };
 
-  const buildResequencePayload = () => {
-    const payload: { id: string; groupId: string | null; sequence: number }[] = [];
-    localGroups.forEach((g) => {
-      g.links.forEach((l, i) => payload.push({ id: l.id, groupId: g.id, sequence: i }));
-    });
-    localUngrouped.forEach((l, i) => payload.push({ id: l.id, groupId: null, sequence: i }));
-    return payload;
-  };
+  // const buildResequencePayload = () => {
+  //   const payload: { id: string; groupId: string | null; sequence: number }[] = [];
+  //   localGroups.forEach((g) => {
+  //     g.links.forEach((l, i) => payload.push({ id: l.id, groupId: g.id, sequence: i }));
+  //   });
+  //   localUngrouped.forEach((l, i) => payload.push({ id: l.id, groupId: null, sequence: i }));
+  //   return payload;
+  // };
 
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -515,267 +516,274 @@ export default function LinksPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-          <div>
-            <Link
-              href="/account/profile"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Profile
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Globe className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Links</h1>
-              <p className="text-muted-foreground text-sm">Drag to reorder. Drop into any group.</p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setIsCreatingGroup(true)}>
-                <FolderPlus className="h-4 w-4 mr-2" />
-                New Group
-              </Button>
-              <Button size="sm" onClick={() => startCreate(null)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Link
-              </Button>
-            </div>
-          </div>
-
-          {loadingLinks ? (
-            <motion.div variants={cardVariants} className="py-16 text-center">
-              <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading your links...</p>
-            </motion.div>
-          ) : !groupedData ? (
-            <motion.div variants={cardVariants} className="py-16 text-center">
-              <div className="h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-6">
-                <Globe className="h-8 w-8 text-muted-foreground" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div>
+                <Link
+                  href="/account/profile"
+                  className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Profile
+                </Link>
               </div>
-              <h3 className="text-lg font-semibold mb-2">No links yet</h3>
-              <p className="text-muted-foreground mb-6">Start by creating your first link or group</p>
-              <div className="flex items-center justify-center gap-3">
-                <Button onClick={() => setIsCreatingGroup(true)} variant="outline">
-                  <FolderPlus className="h-4 w-4 mr-2" />
-                  Create Group
-                </Button>
-                <Button onClick={() => startCreate(null)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Link
-                </Button>
+
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Globe className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">Links</h1>
+                  <p className="text-muted-foreground text-sm">Drag to reorder. Drop into any group.</p>
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setIsCreatingGroup(true)}>
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    New Group
+                  </Button>
+                  <Button size="sm" onClick={() => startCreate(null)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Link
+                  </Button>
+                </div>
               </div>
-            </motion.div>
-          ) : (
-            <>
-              {/* DnD vertical accordion */}
-              <DndContext
-                sensors={sensors}
-                collisionDetection={pointerWithin}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-                // allow cross-container moves (no restrictToParentElement)
-                modifiers={[restrictToVerticalAxis]}
-                measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-              >
-                <SortableContext items={localGroups.map(g => `group-${g.id}`)} strategy={verticalListSortingStrategy}>
-                  <Accordion type="multiple" defaultValue={[...groupedData.data.groups.map((g) => g.id), "__ungrouped__"]} className="space-y-3">
-                    {/* Ungrouped as first section for speed */}
-                    <GroupSection
-                      id={null}
-                      name="Ungrouped"
-                      description="Links without a group"
-                      items={localUngrouped}
-                      onCreateLink={startCreate}
-                      onEdit={startEdit}
-                      onEmptyDropHint="Drop links here"
-                    />
 
-                    {/* All groups */}
-                    {localGroups.map((g) => (
-                      <GroupSection
-                        key={g.id}
-                        id={g.id}
-                        name={g.name}
-                        description={g.description}
-                        items={g.links}
-                        onCreateLink={startCreate}
-                        onDeleteGroup={deleteGroup}
-                        onEditGroup={startEditGroup}
-                        onEdit={startEdit}
-                      />
-                    ))}
-                  </Accordion>
-                </SortableContext>
-
-                <DragOverlay dropAnimation={defaultDropAnimation}>
-                  {dragOverlayItem ? (
-                    <div className="w-full">
-                      <SortableLinkRow item={dragOverlayItem} onEdit={() => {}} />
+              {/* Editor content (same as before) */}
+              <div>
+                {loadingLinks ? (
+                  <motion.div variants={cardVariants} className="py-16 text-center">
+                    <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-muted-foreground">Loading your links...</p>
+                  </motion.div>
+                ) : !groupedData ? (
+                  <motion.div variants={cardVariants} className="py-16 text-center">
+                    <div className="h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-6">
+                      <Globe className="h-8 w-8 text-muted-foreground" />
                     </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-
-              {/* Create Group Modal */}
-              <AnimatePresence>
-                {isCreatingGroup && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
-                    onClick={() => setIsCreatingGroup(false)}
-                  >
-                    <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-                      <CardHeader>
-                        <CardTitle>Create New Group</CardTitle>
-                        <CardDescription>Organize your links into groups</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Group Name</label>
-                          <Input
-                            placeholder="e.g. Work Links"
-                            value={groupForm.name}
-                            onChange={(e) => setGroupForm((f) => ({ ...f, name: e.target.value }))}
-                            autoFocus
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Description (Optional)</label>
-                          <Input
-                            placeholder="What kind of links are these?"
-                            value={groupForm.description ?? ""}
-                            onChange={(e) => setGroupForm((f) => ({ ...f, description: e.target.value }))}
-                          />
-                        </div>
-                        <div className="flex gap-2 pt-4">
-                          <Button onClick={createGroup} className="flex-1">Create Group</Button>
-                          <Button variant="ghost" onClick={() => setIsCreatingGroup(false)}>Cancel</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <h3 className="text-lg font-semibold mb-2">No links yet</h3>
+                    <p className="text-muted-foreground mb-6">Start by creating your first link or group</p>
+                    <div className="flex items-center justify-center gap-3">
+                      <Button onClick={() => setIsCreatingGroup(true)} variant="outline">
+                        <FolderPlus className="h-4 w-4 mr-2" />
+                        Create Group
+                      </Button>
+                      <Button onClick={() => startCreate(null)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Link
+                      </Button>
+                    </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Edit Group Modal */}
-              <AnimatePresence>
-                {editingGroupId && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
-                    onClick={cancelGroupEdit}
-                  >
-                    <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-                      <CardHeader>
-                        <CardTitle>Edit Group</CardTitle>
-                        <CardDescription>Update group details</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Group Name</label>
-                          <Input
-                            placeholder="e.g. Work Links"
-                            value={groupEditForm.name ?? ""}
-                            onChange={(e) => setGroupEditForm((f) => ({ ...f, name: e.target.value }))}
-                            autoFocus
+                ) : (
+                  <>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={pointerWithin}
+                      onDragStart={onDragStart}
+                      onDragEnd={onDragEnd}
+                      modifiers={[restrictToVerticalAxis]}
+                      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+                    >
+                      <SortableContext items={localGroups.map((g) => `group-${g.id}`)} strategy={verticalListSortingStrategy}>
+                        <Accordion type="multiple" defaultValue={[...groupedData.data.groups.map((g) => g.id), "__ungrouped__"]} className="space-y-3">
+                          <GroupSection
+                            id={null}
+                            name="Ungrouped"
+                            description="Links without a group"
+                            items={localUngrouped}
+                            onCreateLink={startCreate}
+                            onEdit={startEdit}
+                            onEmptyDropHint="Drop links here"
                           />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Description (Optional)</label>
-                          <Input
-                            placeholder="What kind of links are these?"
-                            value={groupEditForm.description ?? ""}
-                            onChange={(e) => setGroupEditForm((f) => ({ ...f, description: e.target.value }))}
-                          />
-                        </div>
-                        <div className="flex gap-2 pt-4">
-                          <Button onClick={saveGroupEdit} className="flex-1">Save Changes</Button>
-                          <Button variant="ghost" onClick={cancelGroupEdit}>Cancel</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
-              {/* Create/Edit Link Modal */}
-              <AnimatePresence>
-                {(isCreating || editingLinkId) && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
-                    onClick={cancel}
-                  >
-                    <Card className="w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
-                      <CardHeader>
-                        <CardTitle>{editingLinkId ? "Edit Link" : "Create New Link"}</CardTitle>
-                        <CardDescription>Add a new link to your collection</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium mb-2 block">Link Name</label>
-                            <Input
-                              placeholder="e.g. Google"
-                              value={form.name}
-                              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                              autoFocus
+                          {localGroups.map((g) => (
+                            <GroupSection
+                              key={g.id}
+                              id={g.id}
+                              name={g.name}
+                              description={g.description}
+                              items={g.links}
+                              onCreateLink={startCreate}
+                              onDeleteGroup={deleteGroup}
+                              onEditGroup={startEditGroup}
+                              onEdit={startEdit}
                             />
+                          ))}
+                        </Accordion>
+                      </SortableContext>
+
+                      <DragOverlay dropAnimation={defaultDropAnimation}>
+                        {dragOverlayItem ? (
+                          <div className="w-full">
+                            <SortableLinkRow item={dragOverlayItem} onEdit={() => {}} />
                           </div>
-                          <div>
-                            <label className="text-sm font-medium mb-2 block">URL</label>
-                            <Input
-                              placeholder="https://..."
-                              value={form.url}
-                              onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Description (Optional)</label>
-                          <Input
-                            placeholder="What is this link for?"
-                            value={form.description ?? ""}
-                            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium mb-2 block">Group</label>
-                          <select
-                            value={form.groupId ?? "ungrouped"}
-                            onChange={(e) => setForm((f) => ({ ...f, groupId: e.target.value === "ungrouped" ? null : (e.target.value as string) }))}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          >
-                            <option value="ungrouped">Ungrouped</option>
-                            {(groupedData?.data?.groups ?? []).map((g) => (
-                              <option key={g.id} value={g.id}>{g.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex gap-2 pt-4">
-                          <Button onClick={saveLink} className="flex-1">
-                            {editingLinkId ? "Save Changes" : "Create Link"}
-                          </Button>
-                          <Button variant="ghost" onClick={cancel}>Cancel</Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                        ) : null}
+                      </DragOverlay>
+                    </DndContext>
+
+                    {/* Create Group Modal */}
+                    <AnimatePresence>
+                      {isCreatingGroup && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                          className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+                          onClick={() => setIsCreatingGroup(false)}
+                        >
+                          <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+                            <CardHeader>
+                              <CardTitle>Create New Group</CardTitle>
+                              <CardDescription>Organize your links into groups</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Group Name</label>
+                                <Input
+                                  placeholder="e.g. Work Links"
+                                  value={groupForm.name}
+                                  onChange={(e) => setGroupForm((f) => ({ ...f, name: e.target.value }))}
+                                  autoFocus
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Description (Optional)</label>
+                                <Input
+                                  placeholder="What kind of links are these?"
+                                  value={groupForm.description ?? ""}
+                                  onChange={(e) => setGroupForm((f) => ({ ...f, description: e.target.value }))}
+                                />
+                              </div>
+                              <div className="flex gap-2 pt-4">
+                                <Button onClick={createGroup} className="flex-1">Create Group</Button>
+                                <Button variant="ghost" onClick={() => setIsCreatingGroup(false)}>Cancel</Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Edit Group Modal */}
+                    <AnimatePresence>
+                      {editingGroupId && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                          className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+                          onClick={cancelGroupEdit}
+                        >
+                          <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+                            <CardHeader>
+                              <CardTitle>Edit Group</CardTitle>
+                              <CardDescription>Update group details</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Group Name</label>
+                                <Input
+                                  placeholder="e.g. Work Links"
+                                  value={groupEditForm.name ?? ""}
+                                  onChange={(e) => setGroupEditForm((f) => ({ ...f, name: e.target.value }))}
+                                  autoFocus
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Description (Optional)</label>
+                                <Input
+                                  placeholder="What kind of links are these?"
+                                  value={groupEditForm.description ?? ""}
+                                  onChange={(e) => setGroupEditForm((f) => ({ ...f, description: e.target.value }))}
+                                />
+                              </div>
+                              <div className="flex gap-2 pt-4">
+                                <Button onClick={saveGroupEdit} className="flex-1">Save Changes</Button>
+                                <Button variant="ghost" onClick={cancelGroupEdit}>Cancel</Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Create/Edit Link Modal */}
+                    <AnimatePresence>
+                      {(isCreating || editingLinkId) && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                          className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+                          onClick={cancel}
+                        >
+                          <Card className="w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+                            <CardHeader>
+                              <CardTitle>{editingLinkId ? "Edit Link" : "Create New Link"}</CardTitle>
+                              <CardDescription>Add a new link to your collection</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium mb-2 block">Link Name</label>
+                                  <Input
+                                    placeholder="e.g. Google"
+                                    value={form.name}
+                                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                                    autoFocus
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium mb-2 block">URL</label>
+                                  <Input
+                                    placeholder="https://..."
+                                    value={form.url}
+                                    onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Description (Optional)</label>
+                                <Input
+                                  placeholder="What is this link for?"
+                                  value={form.description ?? ""}
+                                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">Group</label>
+                                <select
+                                  value={form.groupId ?? "ungrouped"}
+                                  onChange={(e) => setForm((f) => ({ ...f, groupId: e.target.value === "ungrouped" ? null : (e.target.value as string) }))}
+                                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                  <option value="ungrouped">Ungrouped</option>
+                                  {(groupedData?.data?.groups ?? []).map((g) => (
+                                    <option key={g.id} value={g.id}>{g.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex gap-2 pt-4">
+                                <Button onClick={saveLink} className="flex-1">
+                                  {editingLinkId ? "Save Changes" : "Create Link"}
+                                </Button>
+                                <Button variant="ghost" onClick={cancel}>Cancel</Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
                 )}
-              </AnimatePresence>
-            </>
-          )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-1">
+              <LinksPreview groups={localGroups} ungrouped={localUngrouped} />
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>

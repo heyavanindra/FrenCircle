@@ -453,7 +453,7 @@ export default function Navbar() {
                     </Button>
 
                     {/* Navbar visibility toggle (mobile) */}
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       onClick={() => setVisible(!visible)}
                       className="w-full justify-start"
@@ -476,7 +476,7 @@ export default function Navbar() {
                           Show Navbar
                         </>
                       )}
-                    </Button>
+                    </Button> */}
 
                     {/* Logout (mobile) */}
                     {isAuthenticated && (
