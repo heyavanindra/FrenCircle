@@ -222,4 +222,73 @@ public sealed class AnalyticsController : BaseApiController
                 detail: "An error occurred while retrieving user count");
         }
     }
+
+    /// <summary>
+    /// Returns counts of clicks grouped by device type (Desktop, Mobile, Tablet, Other)
+    /// for the authenticated user's links.
+    /// </summary>
+    [HttpGet("my/devices")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyDevices(CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated || !Guid.TryParse(UserId, out var uid)) return UnauthorizedProblem();
+
+        // Query analytics for links owned by this user
+        var query = from a in _db.Analytics
+                    join l in _db.Links on a.LinkId equals l.Id
+                    where l.UserId == uid
+                    select a.UserAgent;
+
+        var userAgents = await query.ToListAsync(cancellationToken);
+
+        // Simple heuristics to classify user agents into device categories.
+        int mobile = 0, tablet = 0, desktop = 0, other = 0;
+
+        foreach (var ua in userAgents)
+        {
+            if (string.IsNullOrWhiteSpace(ua))
+            {
+                other++;
+                continue;
+            }
+
+            var lower = ua.ToLowerInvariant();
+
+            // Tablet detection
+            if (lower.Contains("ipad") || (lower.Contains("android") && lower.Contains("tablet")) || lower.Contains("tablet"))
+            {
+                tablet++;
+                continue;
+            }
+
+            // Mobile detection
+            if (lower.Contains("mobi") || lower.Contains("iphone") || lower.Contains("android") && !lower.Contains("tablet") || lower.Contains("phone"))
+            {
+                mobile++;
+                continue;
+            }
+
+            // Desktop detection
+            if (lower.Contains("windows") || lower.Contains("macintosh") || lower.Contains("linux") || lower.Contains("x11") || lower.Contains("cros"))
+            {
+                desktop++;
+                continue;
+            }
+
+            other++;
+        }
+
+        var result = new
+        {
+            desktop,
+            mobile,
+            tablet,
+            other,
+            total = desktop + mobile + tablet + other,
+            retrievedAt = DateTimeOffset.UtcNow
+        };
+
+        return OkEnvelope(result);
+    }
 }
