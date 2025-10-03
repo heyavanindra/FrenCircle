@@ -834,6 +834,7 @@ export default function LinksPage() {
             </AnimatePresence>
 
             <div className="hidden lg:block lg:col-span-1">
+              <div className="sticky top-20">
               {/* Desktop preview: pass the same header into the mock so header appears inside the mock above the links */}
               {(() => {
                 const headerNode = user ? (
@@ -851,6 +852,7 @@ export default function LinksPage() {
 
                 return <LinksPreview groups={localGroups} ungrouped={localUngrouped} header={headerNode} />;
               })()}
+              </div>
             </div>
           </div>
         </motion.div>
