@@ -141,6 +141,51 @@ public sealed class AnalyticsController : BaseApiController
     }
 
     /// <summary>
+    /// Returns summary metrics (total clicks and average clicks per day) for the authenticated user's links in a date range.
+    /// </summary>
+    [HttpGet("my/summary")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMySummary([FromQuery] DateTimeOffset? from, [FromQuery] DateTimeOffset? to, CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated || !Guid.TryParse(UserId, out var uid)) return UnauthorizedProblem();
+
+    // Default to last 30 days if not provided
+    var toVal = to ?? DateTimeOffset.UtcNow;
+    var fromVal = from ?? toVal.AddDays(-29);
+
+    // Normalize to date boundaries (inclusive) using the calendar date components.
+    // Treat the selected calendar dates as UTC-day boundaries so selecting the same day includes that day.
+    var startDateUtc = new DateTime(fromVal.Year, fromVal.Month, fromVal.Day, 0, 0, 0, DateTimeKind.Utc);
+    var endDateUtc = new DateTime(toVal.Year, toVal.Month, toVal.Day, 23, 59, 59, DateTimeKind.Utc).AddMilliseconds(999);
+
+    var start = new DateTimeOffset(startDateUtc, TimeSpan.Zero);
+    var end = new DateTimeOffset(endDateUtc, TimeSpan.Zero);
+
+    // Count analytics for links owned by this user in the date window
+    var query = from a in _db.Analytics
+            join l in _db.Links on a.LinkId equals l.Id
+            where l.UserId == uid && a.At >= start && a.At <= end
+            select a;
+
+        var totalClicks = await query.LongCountAsync(cancellationToken);
+
+        var days = (toVal.Date - fromVal.Date).TotalDays + 1;
+        var averagePerDay = days > 0 ? (double)totalClicks / days : 0.0;
+
+        var result = new
+        {
+            totalClicks,
+            averagePerDay,
+            days = (int)days,
+            from = start,
+            to = toVal
+        };
+
+        return OkEnvelope(result);
+    }
+
+    /// <summary>
     /// Get the total number of users in the system
     /// </summary>
     [HttpGet("users/count")]
