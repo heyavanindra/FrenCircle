@@ -103,7 +103,7 @@ export default function LinksPreview({ groups, ungrouped }: { groups: { id: stri
           </div>
 
           {/* Scrollable content area */}
-          <div className="p-3 overflow-y-auto flex-1 bg-background">
+          <div className="p-3 overflow-y-auto flex-1 bg-background links-preview-scroll">
             <Accordion type="multiple" defaultValue={[...sortedGroups.map((g) => g.id), "__ungrouped__"]} className="space-y-3">
               <GroupSection id={null} name="Ungrouped" description="Links without a group" items={sortedUngrouped} />
               {sortedGroups.map((g) => (

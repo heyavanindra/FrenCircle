@@ -276,6 +276,9 @@ export default function LinksPage() {
     isActive: true,
   });
 
+  // mobile preview modal
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+
   // Local optimistic structure
   const [localGroups, setLocalGroups] = useState<
     { id: string; name: string; description?: string | null; links: LinkItem[] }[]
@@ -530,7 +533,7 @@ export default function LinksPage() {
                 </Link>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-6">
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Globe className="h-4 w-4 text-primary" />
                 </div>
@@ -538,7 +541,7 @@ export default function LinksPage() {
                   <h1 className="text-3xl font-bold">Links</h1>
                   <p className="text-muted-foreground text-sm mt-1 mb-3 sm:mb-0">Drag to reorder. Drop into any group.</p>
                 </div>
-                <div className="sm:ml-auto flex items-center gap-2">
+                <div className="sm:ml-auto flex items-center gap-3">
                   <Button size="sm" variant="outline" onClick={() => setIsCreatingGroup(true)}>
                     <FolderPlus className="h-4 w-4 mr-2" />
                     New Group
@@ -547,8 +550,17 @@ export default function LinksPage() {
                     <Plus className="h-4 w-4 mr-2" />
                     New Link
                   </Button>
+                  {/* Preview button visible only on small screens (grouped with actions) */}
+                    <Button size="sm" variant="outline" className="sm:hidden" onClick={() => setIsPreviewModalOpen(true)}>
+                    <span className="inline-flex items-center">
+                      <Globe className="h-4 w-4 mr-2" />
+                      <span>Preview</span>
+                    </span>
+                  </Button>
                 </div>
               </div>
+
+              
 
               {/* Editor content (same as before) */}
               <div>
@@ -780,7 +792,32 @@ export default function LinksPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-1">
+            {/* Mobile Preview Modal */}
+            <AnimatePresence>
+              {isPreviewModalOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 sm:hidden"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                >
+                  <div className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+                    <div className="rounded-xl overflow-hidden shadow-lg bg-card">
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-lg font-semibold">Preview</div>
+                          <Button size="sm" variant="ghost" onClick={() => setIsPreviewModalOpen(false)}>Close</Button>
+                        </div>
+                        <LinksPreview groups={localGroups} ungrouped={localUngrouped} />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="hidden lg:block lg:col-span-1">
               <LinksPreview groups={localGroups} ungrouped={localUngrouped} />
             </div>
           </div>
