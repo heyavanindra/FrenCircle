@@ -58,6 +58,48 @@ public sealed class GroupsController : BaseApiController
         }
     }
 
+    /// <summary>
+    /// Get groups for a public username (anonymous access).
+    /// </summary>
+    [HttpGet("user/{username}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<LinkGroupResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetGroupsByUsername(string username, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var usernameNorm = (username ?? string.Empty).Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(usernameNorm)) return NotFoundProblem("User not found");
+
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username.ToLower() == usernameNorm, cancellationToken);
+            if (user == null) return NotFoundProblem("User not found");
+
+            var userId = user.Id;
+
+            var groups = await _context.LinkGroups
+                .AsNoTracking()
+                .Where(g => g.UserId == userId)
+                .OrderBy(g => g.Sequence)
+                .Select(g => new LinkGroupResponse(
+                    g.Id,
+                    g.Name,
+                    g.Description,
+                    g.Sequence,
+                    g.IsActive,
+                    new List<LinkSummary>()
+                ))
+                .ToListAsync(cancellationToken);
+
+            return OkEnvelope(groups);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting groups for username {Username}", username);
+            return Problem(StatusCodes.Status500InternalServerError, "Internal Server Error", "An error occurred while retrieving groups");
+        }
+    }
+
     [HttpPost("")]
     [ProducesResponseType(typeof(ApiResponse<LinkGroupResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateGroup([FromBody] CreateGroupRequest request, CancellationToken cancellationToken = default)

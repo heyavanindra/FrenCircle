@@ -42,6 +42,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUser, userHelpers } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { navigationLinks } from "@/data/ui/navigationLinks";
+import { useNavbarVisibility } from "@/contexts/NavbarVisibilityContext";
 import {
   Dialog,
   DialogContent,
@@ -107,6 +108,11 @@ export default function Navbar() {
 
   const router = useRouter();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  // Navbar visibility is driven by in-memory context (no persistence)
+  const { visible, setVisible } = useNavbarVisibility();
+
+  // If navbar visibility is false, render nothing. Visibility is controlled in-memory by context.
+  if (!visible) return null;
 
   return (
     <>
@@ -191,6 +197,40 @@ export default function Navbar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <button
+                      className="flex w-full items-center text-left"
+                      onClick={() => setVisible(!visible)}
+                      aria-pressed={!visible}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-2 h-4 w-4"
+                        aria-hidden
+                      >
+                        {visible ? (
+                          <>
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <path d="M8 12h8" />
+                          </>
+                        ) : (
+                          <>
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <path d="M6 6l12 12" />
+                          </>
+                        )}
+                      </svg>
+                      {visible ? "Hide navbar" : "Show navbar"}
+                    </button>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/account/links" className="cursor-pointer">
                       <UserCircle className="mr-2 h-4 w-4" />
@@ -408,6 +448,32 @@ export default function Navbar() {
                         <>
                           <Sun className="h-4 w-4 mr-2" />
                           Light Mode
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Navbar visibility toggle (mobile) */}
+                    <Button
+                      variant="ghost"
+                      onClick={() => setVisible(!visible)}
+                      className="w-full justify-start"
+                      aria-label="Toggle navbar visibility"
+                    >
+                      {visible ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <path d="M8 12h8" />
+                          </svg>
+                          Hide Navbar
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <path d="M6 6l12 12" />
+                          </svg>
+                          Show Navbar
                         </>
                       )}
                     </Button>

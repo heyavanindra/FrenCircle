@@ -106,6 +106,89 @@ public class LinksController : BaseApiController
     }
 
     /// <summary>
+    /// Get links grouped by group for a public username (anonymous access).
+    /// </summary>
+    [HttpGet("user/{username}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<LinksGroupedResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetLinksByUsername(string username, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Normalize username to lowercase for case-insensitive lookup
+            var usernameNorm = (username ?? string.Empty).Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(usernameNorm)) return NotFoundProblem("User not found");
+
+            // Resolve user by normalized username (case-insensitive)
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username.ToLower() == usernameNorm, cancellationToken);
+            if (user == null) return NotFoundProblem("User not found");
+
+            var userId = user.Id;
+
+            // Load groups owned by this user and their links
+            var groups = await _context.LinkGroups
+                .AsNoTracking()
+                .Where(g => g.UserId == userId)
+                .OrderBy(g => g.Sequence)
+                .ToListAsync(cancellationToken);
+
+            var links = await _context.Links
+                .AsNoTracking()
+                .Where(l => l.UserId == userId)
+                .OrderBy(l => l.Sequence)
+                .ToListAsync(cancellationToken);
+
+            var groupResponses = groups.Select(g => new LinkGroupResponse(
+                Id: g.Id,
+                Name: g.Name,
+                Description: g.Description,
+                Sequence: g.Sequence,
+                IsActive: g.IsActive,
+                Links: links.Where(l => l.GroupId == g.Id).OrderBy(l => l.Sequence).Select(l => new LinkSummary(
+                    Id: l.Id,
+                    Name: l.Name,
+                    Url: l.Url,
+                    Description: l.Description,
+                    IsActive: l.IsActive,
+                    Sequence: l.Sequence,
+                    GroupId: l.GroupId,
+                    CreatedAt: l.CreatedAt,
+                    UpdatedAt: l.UpdatedAt
+                )).ToList()
+            )).ToList();
+
+            var ungrouped = new LinkGroupResponse(
+                Id: Guid.Empty,
+                Name: "Ungrouped",
+                Description: null,
+                Sequence: 0,
+                IsActive: true,
+                Links: links.Where(l => l.GroupId == null).OrderBy(l => l.Sequence).Select(l => new LinkSummary(
+                    Id: l.Id,
+                    Name: l.Name,
+                    Url: l.Url,
+                    Description: l.Description,
+                    IsActive: l.IsActive,
+                    Sequence: l.Sequence,
+                    GroupId: l.GroupId,
+                    CreatedAt: l.CreatedAt,
+                    UpdatedAt: l.UpdatedAt
+                )).ToList()
+            );
+
+            var response = new LinksGroupedResponse(Groups: groupResponses, Ungrouped: ungrouped);
+
+            return OkEnvelope(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting links for username {Username}", username);
+            return Problem(StatusCodes.Status500InternalServerError, "Internal Server Error", "An error occurred while retrieving links");
+        }
+    }
+
+    /// <summary>
     /// Create a new link
     /// </summary>
     [HttpPost("")]

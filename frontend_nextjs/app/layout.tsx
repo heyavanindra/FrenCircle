@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/navbar";
 import { UserProvider } from "@/contexts/UserContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { NavbarVisibilityProvider } from "@/contexts/NavbarVisibilityContext";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionChecker } from "@/components/SessionChecker";
 
@@ -34,10 +35,12 @@ export default function RootLayout({
       >
         <ThemeProvider defaultTheme="light">
           <UserProvider>
-            <SessionChecker />
-            <Navbar />
-            <main>{children}</main>
-            <Toaster />
+            <NavbarVisibilityProvider>
+              <SessionChecker />
+              <Navbar />
+              <main>{children}</main>
+              <Toaster />
+            </NavbarVisibilityProvider>
           </UserProvider>
         </ThemeProvider>
       </body>
