@@ -10,6 +10,7 @@ export interface User {
   username: string;
   email: string;
   avatarUrl?: string;
+  coverUrl?: string;
   login: boolean;
   expiry?: Date;
   // Additional optional fields for future use
