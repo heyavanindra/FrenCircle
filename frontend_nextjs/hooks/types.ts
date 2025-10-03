@@ -230,6 +230,7 @@ export interface UpdateProfileRequest {
   lastName?: string;
   displayName?: string;
   bio?: string;
+  avatarUrl?: string;
   timezone?: string;
   locale?: string;
 }

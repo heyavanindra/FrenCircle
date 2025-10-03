@@ -1,4 +1,4 @@
-using Serilog;
+﻿using Serilog;
 using Serilog.Exceptions;
 using FrenCircle.Api.Middleware; // for CorrelationIdMiddleware
 using FrenCircle.Api.Data;
@@ -51,6 +51,11 @@ builder.Services.AddHttpClient();
 builder.Services.Configure<FrenCircle.Infra.Configuration.SmtpSettings>(
     builder.Configuration.GetSection("Email:Smtp"));
 builder.Services.AddScoped<FrenCircle.Infra.IEmailService, FrenCircle.Infra.EmailService>();
+
+// Cloudinary Service Configuration
+builder.Services.Configure<FrenCircle.Infra.Configuration.CloudinarySettings>(
+    builder.Configuration.GetSection("Cloudinary"));
+builder.Services.AddScoped<FrenCircle.Infra.ICloudinaryService, FrenCircle.Infra.CloudinaryService>();
 
 // Repository Services
 builder.Services.AddScoped<FrenCircle.Contracts.Interfaces.IUserRepository, FrenCircle.Repositories.UserRepository>();
@@ -107,3 +112,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+

@@ -243,6 +243,11 @@ class ApiService {
     const url = this.buildUrl(endpoint);
     const headers = this.buildHeaders(config.headers);
     const controller = this.createAbortController(config.timeout);
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+
+    if (isFormData && headers['Content-Type']) {
+      delete headers['Content-Type'];
+    }
 
     const requestInit: RequestInit = {
       method,
@@ -251,8 +256,12 @@ class ApiService {
       credentials: 'include', // Include cookies in all requests
     };
 
-    if (method === 'POST' && data) {
-      requestInit.body = JSON.stringify(data);
+    if (method === 'POST' && data !== undefined) {
+      if (isFormData) {
+        requestInit.body = data as BodyInit;
+      } else {
+        requestInit.body = JSON.stringify(data);
+      }
     }
 
     try {

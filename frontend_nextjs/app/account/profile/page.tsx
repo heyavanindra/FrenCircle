@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,10 +43,13 @@ export default function ProfilePage() {
     timezone: "",
     locale: ""
   });
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // API hooks
   const { data: profileData, loading: profileLoading, error: profileError, refetch: refetchProfile } = useGet<GetProfileResponse>("/profile");
   const { mutate: updateProfile, loading: isUpdating } = usePost<UpdateProfileResponse>("/profile");
+  const { mutate: uploadAvatar, loading: isUploadingAvatar } = usePost<UpdateProfileResponse>("/media/avatar");
 
   // Initialize form data when profile data loads
   useEffect(() => {
@@ -60,6 +63,7 @@ export default function ProfilePage() {
         timezone: profile.timezone || "",
         locale: profile.locale || ""
       });
+      setAvatarPreview(null);
     }
   }, [profileData]);
 
@@ -68,6 +72,72 @@ export default function ProfilePage() {
       ...prev,
       [e.target.name]: e.target.value
     }));
+  };
+
+  const handleAvatarButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    const maxSizeMb = 5;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      toast.error(`Please upload an image smaller than ${maxSizeMb}MB.`);
+      event.target.value = "";
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+
+    const formDataPayload = new FormData();
+    formDataPayload.append("file", file);
+
+    try {
+      const response = await uploadAvatar(formDataPayload);
+
+      if (response.status === 200 && response.data) {
+        toast.success("Avatar updated successfully!");
+
+        const updatedProfile = response.data.data.profile;
+        if (user) {
+          setUser({
+            ...user,
+            firstName: updatedProfile.firstName,
+            lastName: updatedProfile.lastName,
+            avatarUrl: updatedProfile.avatarUrl ?? undefined,
+          });
+        }
+
+        await refetchProfile();
+        setAvatarPreview(null);
+      }
+    } catch (error: any) {
+      console.error("Avatar upload failed:", error);
+
+      if (error?.status && error?.data?.title) {
+        toast.error(error.data.title);
+      } else if (error?.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to upload avatar. Please try again.");
+      }
+
+      setAvatarPreview(null);
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      event.target.value = "";
+    }
   };
 
   const handleEditToggle = () => {
@@ -268,17 +338,35 @@ export default function ProfilePage() {
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src={displayProfile.avatarUrl || "/placeholder-avatar.jpg"} alt="Profile" />
+                      <AvatarImage src={avatarPreview || displayProfile.avatarUrl || "/placeholder-avatar.jpg"} alt="Profile" />
                       <AvatarFallback className="text-lg">
                         {displayProfile.firstName?.[0]}{displayProfile.lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
+                    {isUploadingAvatar && (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarSelected}
+                    />
                     <Button
                       size="sm"
                       variant="secondary"
                       className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0"
+                      onClick={handleAvatarButtonClick}
+                      disabled={isUploadingAvatar}
                     >
-                      <Camera className="h-4 w-4" />
+                      {isUploadingAvatar ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                   <div>
