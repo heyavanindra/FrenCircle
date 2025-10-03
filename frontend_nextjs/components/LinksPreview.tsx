@@ -79,8 +79,8 @@ export default function LinksPreview({ groups, ungrouped }: { groups: { id: stri
 
   return (
     <div className="w-full flex justify-center">
-      {/* iPhone mock */}
-      <div className="relative rounded-[48px] border-2 border-primary bg-primary/10 shadow-2xl overflow-hidden" style={{ width: 380, height: 812 }}>
+  {/* iPhone mock (reduced height) */}
+  <div className="relative rounded-[48px] border-2 border-primary bg-primary/10 shadow-2xl overflow-hidden" style={{ width: 380, height: 700 }}>
         {/* Top sensor housing / speaker */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-full" style={{ width: 140, height: 10, backgroundColor: 'rgba(59,130,246,0.25)' }} />
 

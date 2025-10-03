@@ -530,15 +530,15 @@ export default function LinksPage() {
                 </Link>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-6">
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Globe className="h-4 w-4 text-primary" />
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold">Links</h1>
-                  <p className="text-muted-foreground text-sm">Drag to reorder. Drop into any group.</p>
+                  <p className="text-muted-foreground text-sm mt-1 mb-3 sm:mb-0">Drag to reorder. Drop into any group.</p>
                 </div>
-                <div className="ml-auto flex items-center gap-2">
+                <div className="sm:ml-auto flex items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => setIsCreatingGroup(true)}>
                     <FolderPlus className="h-4 w-4 mr-2" />
                     New Group
