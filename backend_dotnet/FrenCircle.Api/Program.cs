@@ -55,6 +55,7 @@ builder.Services.AddScoped<FrenCircle.Infra.IEmailService, FrenCircle.Infra.Emai
 // Repository Services
 builder.Services.AddScoped<FrenCircle.Contracts.Interfaces.IUserRepository, FrenCircle.Repositories.UserRepository>();
 builder.Services.AddScoped<FrenCircle.Contracts.Interfaces.IAnalyticsRepository, FrenCircle.Repositories.AnalyticsRepository>();
+builder.Services.AddScoped<FrenCircle.Contracts.Interfaces.IProfileRepository, FrenCircle.Repositories.ProfileRepository>();
 
 // Add custom app services (example)
 // builder.Services.AddSingleton<ILoggingService, LoggingService>();
