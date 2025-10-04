@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { useGet, usePost } from "@/hooks/useApi";
 import { GetProfileResponse, UpdateProfileRequest, UpdateProfileResponse } from "@/hooks/types";
+import AvatarCropDialog from "@/components/profile/AvatarCropDialog";
 
 const containerVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -45,6 +46,9 @@ export default function ProfilePage() {
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [isAvatarCropOpen, setIsAvatarCropOpen] = useState(false);
+  const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
+  const [pendingAvatarName, setPendingAvatarName] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,6 +75,22 @@ export default function ProfilePage() {
     }
   }, [profileData]);
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarCropSrc) {
+        URL.revokeObjectURL(avatarCropSrc);
+      }
+    };
+  }, [avatarCropSrc]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({
       ...prev,
@@ -82,7 +102,7 @@ export default function ProfilePage() {
     avatarInputRef.current?.click();
   };
 
-  const handleAvatarSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -101,6 +121,25 @@ export default function ProfilePage() {
       return;
     }
 
+    const objectUrl = URL.createObjectURL(file);
+    setAvatarCropSrc(objectUrl);
+    setPendingAvatarName(file.name);
+    setIsAvatarCropOpen(true);
+    event.target.value = "";
+  };
+
+  const handleAvatarCropDialogChange = (open: boolean) => {
+    setIsAvatarCropOpen(open);
+    if (!open) {
+      setAvatarCropSrc(null);
+      setPendingAvatarName(null);
+    }
+  };
+
+  const handleAvatarCropped = async (blob: Blob) => {
+    const baseName = pendingAvatarName ? pendingAvatarName.replace(/\.[^/.]+$/, "") : "avatar";
+    const fileName = `${baseName}.jpg`;
+    const file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
     const previewUrl = URL.createObjectURL(file);
     setAvatarPreview(previewUrl);
 
@@ -139,9 +178,6 @@ export default function ProfilePage() {
       }
 
       setAvatarPreview(null);
-    } finally {
-      URL.revokeObjectURL(previewUrl);
-      event.target.value = "";
     }
   };
 
@@ -325,6 +361,12 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AvatarCropDialog
+        isOpen={isAvatarCropOpen}
+        src={avatarCropSrc}
+        onOpenChange={handleAvatarCropDialogChange}
+        onCropped={handleAvatarCropped}
+      />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div
           variants={containerVariants}
@@ -633,15 +675,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
