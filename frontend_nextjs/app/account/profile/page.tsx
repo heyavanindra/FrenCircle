@@ -49,6 +49,9 @@ export default function ProfilePage() {
   const [isAvatarCropOpen, setIsAvatarCropOpen] = useState(false);
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
   const [pendingAvatarName, setPendingAvatarName] = useState<string | null>(null);
+  const [isCoverCropOpen, setIsCoverCropOpen] = useState(false);
+  const [coverCropSrc, setCoverCropSrc] = useState<string | null>(null);
+  const [pendingCoverName, setPendingCoverName] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,6 +93,22 @@ export default function ProfilePage() {
       }
     };
   }, [avatarCropSrc]);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
+    };
+  }, [coverPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (coverCropSrc) {
+        URL.revokeObjectURL(coverCropSrc);
+      }
+    };
+  }, [coverCropSrc]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({
@@ -185,7 +204,7 @@ export default function ProfilePage() {
     coverInputRef.current?.click();
   };
 
-  const handleCoverSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -204,6 +223,25 @@ export default function ProfilePage() {
       return;
     }
 
+    const objectUrl = URL.createObjectURL(file);
+    setCoverCropSrc(objectUrl);
+    setPendingCoverName(file.name);
+    setIsCoverCropOpen(true);
+    event.target.value = "";
+  };
+
+  const handleCoverCropDialogChange = (open: boolean) => {
+    setIsCoverCropOpen(open);
+    if (!open) {
+      setCoverCropSrc(null);
+      setPendingCoverName(null);
+    }
+  };
+
+  const handleCoverCropped = async (blob: Blob) => {
+    const baseName = pendingCoverName ? pendingCoverName.replace(/\.[^/.]+$/, "") : "cover";
+    const fileName = `${baseName}.jpg`;
+    const file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
     const previewUrl = URL.createObjectURL(file);
     setCoverPreview(previewUrl);
 
@@ -242,9 +280,6 @@ export default function ProfilePage() {
       }
 
       setCoverPreview(null);
-    } finally {
-      URL.revokeObjectURL(previewUrl);
-      event.target.value = "";
     }
   };
 
@@ -366,6 +401,22 @@ export default function ProfilePage() {
         src={avatarCropSrc}
         onOpenChange={handleAvatarCropDialogChange}
         onCropped={handleAvatarCropped}
+        aspect={1}
+        cropShape="round"
+        dialogTitle="Adjust your avatar"
+        initialZoom={1.2}
+      />
+      <AvatarCropDialog
+        isOpen={isCoverCropOpen}
+        src={coverCropSrc}
+        onOpenChange={handleCoverCropDialogChange}
+        onCropped={handleCoverCropped}
+        aspect={16 / 9}
+        cropShape="rect"
+        dialogTitle="Adjust your cover image"
+        initialZoom={1}
+        minZoom={1}
+        maxZoom={5}
       />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div
