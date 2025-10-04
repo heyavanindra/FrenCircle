@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -177,22 +177,25 @@ function UserHeader({ username }: { username: string }) {
 
   return (
     <div className="bg-card rounded-lg border overflow-hidden">
-      {/* banner / header placeholder */}
-      <div className="h-28 sm:h-36 w-full overflow-hidden bg-gradient-to-r from-primary/8 via-transparent to-primary/8">
-        {coverUrl ? (
-          <img src={coverUrl} alt="Cover image" className="h-full w-full object-cover" />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-r from-primary/10 via-background to-primary/10" />
-        )}
+      <div className="relative w-full">
+        <div className="overflow-hidden aspect-[820/312] bg-gradient-to-r from-primary/8 via-transparent to-primary/8">
+          {coverUrl ? (
+            <img src={coverUrl} alt="Cover image" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-r from-primary/10 via-background to-primary/10" />
+          )}
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 flex justify-center translate-y-1/2 z-20">
+          <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full ring-4 ring-card bg-white overflow-hidden shadow-lg">
+            <img src={avatarUrl ?? "/images/avatar-placeholder.png"} alt={displayName} className="h-full w-full object-cover" />
+          </div>
+        </div>
       </div>
 
-      {/* avatar overlapping banner + centered name */}
-      <div className="-mt-10 sm:-mt-12 flex flex-col items-center text-center px-4 pb-4">
-        <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full ring-4 ring-card bg-white overflow-hidden">
-          <img src={avatarUrl ?? '/images/avatar-placeholder.png'} alt={displayName} className="h-full w-full object-cover" />
-        </div>
-        <h2 className="mt-3 text-lg sm:text-xl font-semibold truncate">{displayName}</h2>
-        <p className="text-sm text-muted-foreground">@{userData.data.username}</p>
+      <div className="mt-10 sm:mt-12 px-4 pb-4 flex flex-col items-center text-center">
+        <h2 className="text-lg sm:text-xl font-semibold truncate">{displayName}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">@{userData.data.username}</p>
       </div>
     </div>
   );
@@ -300,7 +303,7 @@ export default function LinksPageViewOnly() {
                 <Globe className="h-8 w-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold mb-2">No links found</h3>
-              <p className="text-muted-foreground">You don’t have any links yet.</p>
+              <p className="text-muted-foreground">You don't have any links yet.</p>
             </motion.div>
           ) : (
             <>

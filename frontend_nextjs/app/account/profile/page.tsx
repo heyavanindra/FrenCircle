@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
@@ -411,12 +411,14 @@ export default function ProfilePage() {
         src={coverCropSrc}
         onOpenChange={handleCoverCropDialogChange}
         onCropped={handleCoverCropped}
-        aspect={16 / 9}
+        aspect={820 / 312}
         cropShape="rect"
         dialogTitle="Adjust your cover image"
         initialZoom={1}
         minZoom={1}
         maxZoom={5}
+        outputWidth={820}
+        outputHeight={312}
       />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div
@@ -446,7 +448,7 @@ export default function ProfilePage() {
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                 <div className="flex items-center">
                   <div className="text-yellow-600 dark:text-yellow-400 text-sm">
-                    âš ï¸ Using cached profile data. Some information may not be up to date.
+                    Warning: Using cached profile data. Some information may not be up to date.
                   </div>
                 </div>
               </div>
@@ -505,7 +507,7 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Cover Section */}
-                <div className="relative w-full h-40 overflow-hidden rounded-xl bg-muted">
+                <div className="relative w-full overflow-hidden rounded-xl bg-muted aspect-[820/312]">
                   {coverImage ? (
                     <img src={coverImage} alt="Cover" className="h-full w-full object-cover" />
                   ) : (

@@ -16,17 +16,47 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+interface CropOutputOptions {
+  mime?: string;
+  quality?: number;
+  width?: number;
+  height?: number;
+}
+
 async function getCroppedBlob(
   imageSrc: string,
   croppedAreaPixels: { x: number; y: number; width: number; height: number },
-  mime: string = "image/jpeg",
-  quality = 0.92
+  options: CropOutputOptions = {}
 ): Promise<Blob> {
+  const { mime = "image/jpeg", quality = 0.92, width, height } = options;
   const image = await loadImage(imageSrc);
 
+  const sourceWidth = Math.max(1, Math.floor(croppedAreaPixels.width));
+  const sourceHeight = Math.max(1, Math.floor(croppedAreaPixels.height));
+  const sourceRatio = sourceWidth / sourceHeight;
+
+  let targetWidth = typeof width === "number" ? Math.max(1, Math.round(width)) : undefined;
+  let targetHeight = typeof height === "number" ? Math.max(1, Math.round(height)) : undefined;
+
+  if (targetWidth && !targetHeight) {
+    targetHeight = Math.max(1, Math.round(targetWidth / sourceRatio));
+  } else if (!targetWidth && targetHeight) {
+    targetWidth = Math.max(1, Math.round(targetHeight * sourceRatio));
+  } else if (!targetWidth && !targetHeight) {
+    targetWidth = sourceWidth;
+    targetHeight = sourceHeight;
+  }
+
+  if (targetWidth === undefined || targetHeight === undefined) {
+    throw new Error("Invalid crop dimensions");
+  }
+
+  const finalWidth = targetWidth;
+  const finalHeight = targetHeight;
+
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.floor(croppedAreaPixels.width));
-  canvas.height = Math.max(1, Math.floor(croppedAreaPixels.height));
+  canvas.width = finalWidth;
+  canvas.height = finalHeight;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
@@ -65,9 +95,13 @@ interface AvatarCropDialogProps {
   minZoom?: number;
   maxZoom?: number;
   confirmLabel?: string;
+  outputWidth?: number;
+  outputHeight?: number;
+  outputMimeType?: string;
+  outputQuality?: number;
 }
 
-export default function AvatarCropDialog({ isOpen, src, onOpenChange, onCropped, aspect = 1, cropShape = "round", dialogTitle = "Adjust your avatar", initialZoom = 1, minZoom = 1, maxZoom = 4, confirmLabel = "Save" }: AvatarCropDialogProps) {
+export default function AvatarCropDialog({ isOpen, src, onOpenChange, onCropped, aspect = 1, cropShape = "round", dialogTitle = "Adjust your avatar", initialZoom = 1, minZoom = 1, maxZoom = 4, confirmLabel = "Save", outputWidth, outputHeight, outputMimeType, outputQuality }: AvatarCropDialogProps) {
   const [crop, setCrop] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(initialZoom);
   const [croppedPixels, setCroppedPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -90,14 +124,19 @@ export default function AvatarCropDialog({ isOpen, src, onOpenChange, onCropped,
     setSaving(true);
     try {
       console.debug("AvatarCropDialog: confirming crop, pixels=", croppedPixels);
-      const blob = await getCroppedBlob(src, croppedPixels, "image/jpeg", 0.92);
+      const blob = await getCroppedBlob(src, croppedPixels, {
+        mime: outputMimeType,
+        quality: outputQuality,
+        width: outputWidth,
+        height: outputHeight,
+      });
       console.debug("AvatarCropDialog: created blob", blob);
       await onCropped(blob);
       onOpenChange(false);
     } finally {
       setSaving(false);
     }
-  }, [src, croppedPixels, onCropped, onOpenChange]);
+  }, [src, croppedPixels, outputMimeType, outputQuality, outputWidth, outputHeight, onCropped, onOpenChange]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -144,9 +183,10 @@ export default function AvatarCropDialog({ isOpen, src, onOpenChange, onCropped,
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={!src || !croppedPixels || saving}>{saving ? "Saving…" : "Save"}</Button>
+          <Button onClick={handleConfirm} disabled={!src || !croppedPixels || saving}>{saving ? "Saving..." : "Save"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
