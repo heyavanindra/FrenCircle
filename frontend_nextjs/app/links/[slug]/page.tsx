@@ -303,7 +303,7 @@ export default function LinksPageViewOnly() {
                 <Globe className="h-8 w-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold mb-2">No links found</h3>
-              <p className="text-muted-foreground">You don't have any links yet.</p>
+              <p className="text-muted-foreground">You don&apos;t have any links yet.</p>
             </motion.div>
           ) : (
             <>
