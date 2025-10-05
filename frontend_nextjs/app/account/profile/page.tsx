@@ -37,6 +37,7 @@ export default function ProfilePage() {
   const { user, isAuthenticated, setUser } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
+    username: "",
     firstName: "",
     lastName: "",
     displayName: "",
@@ -66,6 +67,7 @@ export default function ProfilePage() {
     if (profileData?.data) {
       const profile = profileData.data;
       setFormData({
+        username: profile.username || "",
         firstName: profile.firstName || "",
         lastName: profile.lastName || "",
         displayName: profile.displayName || "",
@@ -289,6 +291,7 @@ export default function ProfilePage() {
       if (profileData?.data) {
         const profile = profileData.data;
         setFormData({
+          username: profile.username || "",
           firstName: profile.firstName || "",
           lastName: profile.lastName || "",
           displayName: profile.displayName || "",
@@ -303,9 +306,27 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     try {
+      // Client-side username validation
+      if (formData.username.trim()) {
+        const username = formData.username.trim();
+        if (username.length < 3) {
+          toast.error("Username must be at least 3 characters long");
+          return;
+        }
+        if (username.length > 30) {
+          toast.error("Username cannot exceed 30 characters");
+          return;
+        }
+        if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+          toast.error("Username can only contain letters, numbers, underscores, dots, and hyphens");
+          return;
+        }
+      }
+
       // Only send fields that have values
       const updateData: UpdateProfileRequest = {};
       
+      if (formData.username.trim()) updateData.username = formData.username.trim();
       if (formData.firstName.trim()) updateData.firstName = formData.firstName.trim();
       if (formData.lastName.trim()) updateData.lastName = formData.lastName.trim();
       if (formData.displayName.trim()) updateData.displayName = formData.displayName.trim();
@@ -323,11 +344,12 @@ export default function ProfilePage() {
         if (user) {
           setUser({
             ...user,
+            username: updatedProfile.username ?? user.username,
             firstName: updatedProfile.firstName,
             lastName: updatedProfile.lastName,
             avatarUrl: updatedProfile.avatarUrl ?? user.avatarUrl,
             coverUrl: updatedProfile.coverUrl ?? user.coverUrl,
-            // Note: username and email cannot be changed via profile update
+            // Note: email cannot be changed via profile update
           });
         }
 
@@ -624,8 +646,17 @@ export default function ProfilePage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Username</label>
-                    <Input value={displayProfile.username} readOnly className="bg-muted/50" />
-                    <p className="text-xs text-muted-foreground">Username cannot be changed</p>
+                    <Input 
+                      name="username"
+                      value={isEditing ? formData.username : displayProfile.username} 
+                      onChange={handleInputChange}
+                      readOnly={!isEditing}
+                      className={isEditing ? "" : "bg-muted/50"}
+                      placeholder="Choose a unique username"
+                    />
+                    {isEditing && (
+                      <p className="text-xs text-muted-foreground">3-30 characters, letters, numbers, dots, hyphens, and underscores only</p>
+                    )}
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-medium">Email</label>

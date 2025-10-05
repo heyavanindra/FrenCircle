@@ -80,6 +80,25 @@ public sealed class ProfileController : BaseApiController
                 return UnauthorizedProblem("Invalid user context");
             }
 
+            // Username validation
+            if (!string.IsNullOrWhiteSpace(request.Username))
+            {
+                if (request.Username.Length < 4)
+                {
+                    return BadRequestProblem("Username must be at least 3 characters long");
+                }
+
+                if (request.Username.Length > 30)
+                {
+                    return BadRequestProblem("Username cannot exceed 30 characters");
+                }
+
+                if (!System.Text.RegularExpressions.Regex.IsMatch(request.Username, @"^[a-zA-Z0-9_.-]+$"))
+                {
+                    return BadRequestProblem("Username can only contain letters, numbers, underscores, dots, and hyphens");
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(request.DisplayName) && request.DisplayName.Length > 50)
             {
                 return BadRequestProblem("Display name cannot exceed 50 characters");
@@ -99,6 +118,11 @@ public sealed class ProfileController : BaseApiController
 
             _logger.LogInformation("Profile updated successfully for user {UserId}", UserId);
             return OkEnvelope(response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "Username is already taken")
+        {
+            _logger.LogWarning("Username already taken for user {UserId}: {Username}", UserId, request.Username);
+            return BadRequestProblem("Username is already taken");
         }
         catch (Exception ex)
         {

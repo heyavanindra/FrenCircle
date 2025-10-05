@@ -1,6 +1,7 @@
 ﻿namespace FrenCircle.Contracts.Requests;
 
 public sealed record UpdateProfileRequest(
+    string? Username = null,
     string? FirstName = null,
     string? LastName = null,
     string? DisplayName = null,

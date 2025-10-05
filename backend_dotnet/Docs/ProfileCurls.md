@@ -62,6 +62,7 @@ curl -X POST "https://localhost:7001/profile" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)" \
   -d '{
+    "username": "johnsmith2024",
     "firstName": "John",
     "lastName": "Smith",
     "displayName": "Johnny",
@@ -81,7 +82,7 @@ curl -X POST "https://localhost:7001/profile" \
       "id": "12345678-1234-1234-1234-123456789abc",
       "email": "user@example.com",
       "emailVerified": true,
-      "username": "johndoe",
+      "username": "johnsmith2024",
       "firstName": "John",
       "lastName": "Smith",
       "displayName": "Johnny",
@@ -99,14 +100,24 @@ curl -X POST "https://localhost:7001/profile" \
 }
 ```
 
-**Partial Update Example:**
+**Partial Update Examples:**
 ```bash
+# Update only bio
 curl -X POST "https://localhost:7001/profile" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -H "X-Correlation-Id: $(uuidgen)" \
   -d '{
     "bio": "Updated bio only"
+  }'
+
+# Update only username
+curl -X POST "https://localhost:7001/profile" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: $(uuidgen)" \
+  -d '{
+    "username": "mynewusername"
   }'
 ```
 
@@ -141,7 +152,30 @@ curl -X POST "https://localhost:7001/profile/password" \
 
 ---
 
-## 🔐 Session Management
+## � Username Validation Rules
+
+When updating the username field, the following validation rules apply:
+
+- **Minimum Length**: 3 characters
+- **Maximum Length**: 30 characters
+- **Allowed Characters**: Letters (a-Z), numbers (0-9), underscores (_), dots (.), and hyphens (-)
+- **Uniqueness**: Username must be unique across all users (case-insensitive)
+
+**Valid Username Examples:**
+- `john_doe`
+- `user123`
+- `my.username`
+- `user-name`
+
+**Invalid Username Examples:**
+- `ab` (too short)
+- `user@domain.com` (contains @ symbol)
+- `user name` (contains space)
+- `existing_username` (already taken by another user)
+
+---
+
+## �🔐 Session Management
 
 ### Get All Sessions
 Retrieve all active sessions for the current user.
@@ -268,12 +302,48 @@ curl -X POST "https://localhost:7001/profile/delete" \
 ## 📝 Error Responses
 
 ### 400 Bad Request
+
+**Field validation error:**
 ```json
 {
   "type": "about:blank",
   "title": "Bad request",
   "status": 400,
   "detail": "Display name cannot exceed 50 characters",
+  "instance": "/profile",
+  "correlationId": "abc123-def456-ghi789"
+}
+```
+
+**Username validation errors:**
+```json
+{
+  "type": "about:blank",
+  "title": "Bad request",
+  "status": 400,
+  "detail": "Username must be at least 3 characters long",
+  "instance": "/profile",
+  "correlationId": "abc123-def456-ghi789"
+}
+```
+
+```json
+{
+  "type": "about:blank",
+  "title": "Bad request",
+  "status": 400,
+  "detail": "Username can only contain letters, numbers, underscores, dots, and hyphens",
+  "instance": "/profile",
+  "correlationId": "abc123-def456-ghi789"
+}
+```
+
+```json
+{
+  "type": "about:blank",
+  "title": "Bad request",
+  "status": 400,
+  "detail": "Username is already taken",
   "instance": "/profile",
   "correlationId": "abc123-def456-ghi789"
 }

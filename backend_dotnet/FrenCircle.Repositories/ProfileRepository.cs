@@ -132,6 +132,7 @@ public class ProfileRepository : IProfileRepository
 
         string? Sanitize(string? value) => value == null ? null : (string.IsNullOrWhiteSpace(value) ? null : value.Trim());
 
+        var username = request.Username is null ? current.Username : Sanitize(request.Username);
         var firstName = request.FirstName is null ? current.FirstName : Sanitize(request.FirstName);
         var lastName = request.LastName is null ? current.LastName : Sanitize(request.LastName);
         var displayName = request.DisplayName is null ? current.DisplayName : Sanitize(request.DisplayName);
@@ -141,9 +142,30 @@ public class ProfileRepository : IProfileRepository
         var timezone = request.Timezone is null ? current.Timezone : Sanitize(request.Timezone);
         var locale = request.Locale is null ? current.Locale : Sanitize(request.Locale);
 
+        // Check username uniqueness if it's being changed
+        if (username != current.Username && !string.IsNullOrEmpty(username))
+        {
+            const string checkUsernameQuery = @"
+                SELECT COUNT(1) FROM public.""Users""
+                WHERE LOWER(""Username"") = LOWER(@username) AND ""Id"" != @userId;";
+
+            await using var checkCommand = new NpgsqlCommand(checkUsernameQuery, connection, transaction);
+            checkCommand.Parameters.Add("username", NpgsqlDbType.Text).Value = username;
+            checkCommand.Parameters.Add("userId", NpgsqlDbType.Uuid).Value = userId;
+
+            var existingCountResult = await checkCommand.ExecuteScalarAsync(cancellationToken);
+            var existingCount = existingCountResult as long? ?? 0;
+            if (existingCount > 0)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw new InvalidOperationException("Username is already taken");
+            }
+        }
+
         const string updateQuery = @"
             UPDATE public.""Users""
-            SET ""FirstName"" = @firstName,
+            SET ""Username"" = @username,
+                ""FirstName"" = @firstName,
                 ""LastName"" = @lastName,
                 ""DisplayName"" = @displayName,
                 ""Bio"" = @bio,
@@ -155,6 +177,7 @@ public class ProfileRepository : IProfileRepository
             WHERE ""Id"" = @userId;";
 
         await using var updateCommand = new NpgsqlCommand(updateQuery, connection, transaction);
+        updateCommand.Parameters.Add("username", NpgsqlDbType.Text).Value = username;
         updateCommand.Parameters.Add("firstName", NpgsqlDbType.Text).Value = (object?)firstName ?? DBNull.Value;
         updateCommand.Parameters.Add("lastName", NpgsqlDbType.Text).Value = (object?)lastName ?? DBNull.Value;
         updateCommand.Parameters.Add("displayName", NpgsqlDbType.Text).Value = (object?)displayName ?? DBNull.Value;
@@ -192,7 +215,7 @@ public class ProfileRepository : IProfileRepository
             current.Id,
             current.Email,
             current.EmailVerified,
-            current.Username,
+            username ?? current.Username,
             firstName,
             lastName,
             displayName,

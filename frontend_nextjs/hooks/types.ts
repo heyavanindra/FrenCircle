@@ -230,6 +230,7 @@ export interface GetProfileResponse {
 }
 
 export interface UpdateProfileRequest {
+  username?: string;
   firstName?: string;
   lastName?: string;
   displayName?: string;
