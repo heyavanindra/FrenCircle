@@ -459,6 +459,11 @@ public class ProfileRepository : IProfileRepository
             sessions.Add(session);
         }
 
+        // Ensure the reader is closed before committing the transaction so
+        // we don't attempt another command on the same connection while a
+        // reader is still open (which causes NpgsqlOperationInProgressException).
+        await reader.CloseAsync();
+
         await transaction.CommitAsync(cancellationToken);
 
         return new SessionsResponse(sessions);
