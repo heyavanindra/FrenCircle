@@ -96,7 +96,7 @@ public sealed class AuthController : BaseApiController
             _context.Sessions.Add(session);
 
             // Create refresh token (use centralized helper so lifetimes are consistent)
-        var (refreshTokenValue, refreshToken) = await CreateAndAddRefreshToken(user.Id, session.Id, request.RememberMe);
+            var (refreshTokenValue, refreshToken) = await CreateAndAddRefreshToken(user.Id, session.Id, request.RememberMe);
             user.UpdatedAt = DateTimeOffset.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -115,6 +115,14 @@ public sealed class AuthController : BaseApiController
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
 
             var userInfo = BuildUserInfo(user, authMethod: "EmailPassword");
+
+            // Set refresh token as HTTP-only cookie
+            if (!string.IsNullOrEmpty(refreshTokenValue))
+            {
+                var refreshTokenCookieOptions = CreateSecureCookieOptions(TimeSpan.FromDays(request.RememberMe ? 60 : 14)); // Match refresh token expiry
+                Response.Cookies.Append("refreshToken", refreshTokenValue, refreshTokenCookieOptions);
+                _logger.LogInformation("Set refresh token HTTP-only cookie for regular login user {UserId}", user.Id);
+            }
 
             // Return refresh token in response for frontend compatibility
             var authResponse = new AuthResponse(
@@ -301,14 +309,24 @@ public sealed class AuthController : BaseApiController
 
         try
         {
-            // Read refresh token from request body
-            if (string.IsNullOrEmpty(request.RefreshToken))
+            // Read refresh token from request body or HTTP-only cookie
+            var refreshTokenValue = request.RefreshToken;
+
+            // Fallback to HTTP-only cookie if not provided in request body
+            if (string.IsNullOrEmpty(refreshTokenValue))
             {
-                _logger.LogWarning("Refresh token not provided in request body");
-                return UnauthorizedProblem("Refresh token not found");
+                if (Request.Cookies.TryGetValue("refreshToken", out var cookieToken))
+                {
+                    refreshTokenValue = cookieToken;
+                    _logger.LogInformation("Using refresh token from HTTP-only cookie");
+                }
             }
 
-            var refreshTokenValue = request.RefreshToken;
+            if (string.IsNullOrEmpty(refreshTokenValue))
+            {
+                _logger.LogWarning("Refresh token not provided in request body or cookie");
+                return UnauthorizedProblem("Refresh token not found");
+            }
 
             var tokenHash = HashToken(refreshTokenValue);
 
@@ -365,6 +383,13 @@ public sealed class AuthController : BaseApiController
             var jwtExpiryMinutes = _configuration.GetSection("JWT:ExpiryMinutes").Get<int?>();
             var expiryMinutes = jwtExpiryMinutes ?? 15;
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(expiryMinutes);
+
+            // Set new refresh token as HTTP-only cookie
+            if (!string.IsNullOrEmpty(newRefreshTokenValue))
+            {
+                var refreshTokenCookieOptions = CreateSecureCookieOptions(newRefreshToken.ExpiresAt - DateTimeOffset.UtcNow);
+                Response.Cookies.Append("refreshToken", newRefreshTokenValue, refreshTokenCookieOptions);
+            }
 
             // Return refresh token in response for frontend compatibility
             var response = new RefreshTokenResponse(
@@ -466,6 +491,25 @@ public sealed class AuthController : BaseApiController
                     }
                 }
             }
+
+            // Clear refresh token HTTP-only cookie (use same options as when setting)
+            var deleteCookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = HttpContext.Request.IsHttps,
+                SameSite = HttpContext.Request.IsHttps ? SameSiteMode.None : SameSiteMode.Lax,
+                Path = "/" // Match the path used when setting the cookie
+            };
+            
+            // Set domain for development cross-port access
+            var isDevelopment = _configuration.GetValue<bool>("IsDevelopment", false) ||
+                               !_configuration.GetValue<bool>("IsProduction", false);
+            if (isDevelopment && HttpContext.Request.Host.Host == "localhost")
+            {
+                deleteCookieOptions.Domain = "localhost";
+            }
+            
+            Response.Cookies.Delete("refreshToken", deleteCookieOptions);
 
             var response = new LogoutResponse(
                 Message: "Logged out successfully",
@@ -1108,7 +1152,19 @@ public sealed class AuthController : BaseApiController
 
             _logger.LogInformation("Google OAuth login successful for user {UserId}", user.Id);
 
-            // Instead of returning JSON, redirect back to frontend with success
+            // Set refresh token as HTTP-only cookie  
+            if (!string.IsNullOrEmpty(authResponse.RefreshToken))
+            {
+                var refreshTokenCookieOptions = CreateSecureCookieOptions(TimeSpan.FromDays(7)); // Match refresh token expiry
+                Response.Cookies.Append("refreshToken", authResponse.RefreshToken, refreshTokenCookieOptions);
+                _logger.LogInformation("Set refresh token HTTP-only cookie for Google OAuth user {UserId}", user.Id);
+            }
+            else
+            {
+                _logger.LogWarning("No refresh token available to set as cookie for user {UserId}", user.Id);
+            }
+
+            // Must redirect back to frontend (this is a browser redirect, not an API call)
             var frontendUrl = _configuration.GetValue<string>("Frontend:BaseUrl", "http://localhost:3000");
             var redirectUrl = $"{frontendUrl}/account/oauth/callback?success=true&token={authResponse.AccessToken}&expires={authResponse.ExpiresAt:yyyy-MM-ddTHH:mm:ssZ}";
 
@@ -1403,14 +1459,23 @@ public sealed class AuthController : BaseApiController
 
         _logger.LogInformation("Cookie configuration - HTTPS: {IsHttps}, Development: {IsDevelopment}", isHttps, isDevelopment);
 
-        return new CookieOptions
+        var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Secure = isHttps, // Only secure on HTTPS, allow HTTP for localhost development
-            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.None, // None for HTTPS cross-origin, Lax for HTTP localhost (OVERRIDE with None for testing)
-            Path = "/auth",
+            SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax, // Lax for HTTP localhost development
+            Path = "/", // Make cookie available site-wide
             MaxAge = maxAge
         };
+
+        // In development, set domain to localhost so it works across different ports
+        if (isDevelopment && HttpContext.Request.Host.Host == "localhost")
+        {
+            cookieOptions.Domain = "localhost";
+            _logger.LogInformation("Setting cookie domain to 'localhost' for development cross-port access");
+        }
+
+        return cookieOptions;
     }
 
 }

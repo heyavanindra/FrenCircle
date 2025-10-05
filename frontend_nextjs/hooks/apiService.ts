@@ -119,12 +119,8 @@ class ApiService {
     
     console.log(' Attempting token refresh to:', url);
     
-    // Get refresh token from localStorage
+    // Get refresh token from localStorage (fallback for backward compatibility)
     const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
-      console.log(' No refresh token found in localStorage');
-      throw new Error('No refresh token available');
-    }
     
     try {
       const response = await fetch(url, {
@@ -132,8 +128,9 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include HTTP-only cookies
         body: JSON.stringify({
-          refreshToken: refreshToken
+          refreshToken: refreshToken || "" // Send from localStorage if available, otherwise empty (backend will use cookie)
         })
       });
 

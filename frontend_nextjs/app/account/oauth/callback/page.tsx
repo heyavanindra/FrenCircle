@@ -146,7 +146,7 @@ export default function OAuthCallbackPage() {
           if (response.data?.accessToken && response.data?.user) {
             const data = response.data;
             
-            // Set access token in localStorage
+            // Set access token in localStorage (refresh token is now in HTTP-only cookie)
             setToken(data.accessToken);
             
             // Update user context with user data
