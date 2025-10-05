@@ -2,6 +2,22 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+        pathname: '/jsm33t/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'frencircle.com',
+        port: '',
+        pathname: '/og/**',
+      },
+    ],
+  },
   /* config options here */
 };
 
