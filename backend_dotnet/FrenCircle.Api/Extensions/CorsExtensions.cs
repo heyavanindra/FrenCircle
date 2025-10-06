@@ -40,7 +40,7 @@ public static class CorsExtensions
     /// builder.Services.AddCustomCors();
     /// </code>
     /// </example>
-    public static IServiceCollection AddCustomCors(this IServiceCollection services)
+    public static IServiceCollection AddCustomCors_OLD(this IServiceCollection services)
     {
         services.AddCors(options =>
         {
@@ -55,6 +55,41 @@ public static class CorsExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddCustomCors(this IServiceCollection services)
+    {
+        services.AddCors(options =>
+        {
+            options.AddPolicy(AllowFrontendPolicy, policy =>
+            {
+                policy
+                    .SetIsOriginAllowed(origin =>
+                    {
+                        if (string.IsNullOrWhiteSpace(origin)) return false;
+                        try
+                        {
+                            var host = new Uri(origin).Host;
+                            // allow root domain and any subdomain of frencircle.com
+                            if (host.Equals("frencircle.com", StringComparison.OrdinalIgnoreCase)) return true;
+                            if (host.EndsWith(".frencircle.com", StringComparison.OrdinalIgnoreCase)) return true;
+                            // allow localhost for dev (any port)
+                            if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return true;
+                            return false;
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    })
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
+            });
+        });
+
+        return services;
+    }
+
 
     /// <summary>
     /// Applies the <see cref="AllowFrontendPolicy"/> CORS policy to the application pipeline.
