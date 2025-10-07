@@ -59,8 +59,8 @@ jobs:
             git clean -fd -e logs/
             git pull --ff-only
 
-            DOCKER_BUILDKIT=1 docker compose -p frencircle up -d --build --remove-orphans fastapi
-            docker compose -p frencircle ps
+            DOCKER_BUILDKIT=1 docker compose -p linqyard up -d --build --remove-orphans fastapi
+            docker compose -p linqyard ps
           '" || echo '[fastapi] Build or deploy failed'
 
       - name: Show recent service logs (shared lock)
@@ -79,7 +79,7 @@ jobs:
             # Shared lock; wait up to 2 minutes to avoid clashing with an active deploy
             if flock -s -w 120 9; then
               cd \"${REMOTE_DIR}\"
-              docker compose -p frencircle logs fastapi --since=5m || true
+              docker compose -p linqyard logs fastapi --since=5m || true
             else
               echo \"[fastapi] Skipping logs: could not acquire shared lock within 2 minutes\" >&2
             fi

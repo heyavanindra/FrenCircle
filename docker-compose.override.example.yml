@@ -37,7 +37,7 @@ services:
       # Persist logs from inside container to a local folder (handy for debugging)
       - ./logs/dotnet:/app/logs/dotnet:rw
     # Where to run dotnet commands inside the container
-    working_dir: /src/FrenCircle.Api
+    working_dir: /src/Linqyard.Api
     # Run the API with hot reload and bind to all interfaces on 8080 in-container
     command: dotnet watch run --urls "http://0.0.0.0:8080"
     environment:

@@ -30,8 +30,8 @@ jobs:
         run: |
           set -euo pipefail
           ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "cd '${REMOTE_DIR}' && \
-            docker compose -p frencircle up -d --force-recreate --remove-orphans && \
-            docker compose -p frencircle ps"
+            docker compose -p linqyard up -d --force-recreate --remove-orphans && \
+            docker compose -p linqyard ps"
 
       - name: Show recent logs
         if: always()
@@ -42,4 +42,4 @@ jobs:
           REMOTE_DIR: ${{ secrets.REMOTE_DIR }}
         run: |
           ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" \
-            "cd '${REMOTE_DIR}' && docker compose -p frencircle logs --since=5m || true"
+            "cd '${REMOTE_DIR}' && docker compose -p linqyard logs --since=5m || true"
