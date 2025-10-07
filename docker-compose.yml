@@ -2,14 +2,14 @@ services:
   dotnet:
     build:
       context: ./backend_dotnet
-      dockerfile: ./FrenCircle.Api/Dockerfile
+      dockerfile: ./Linqyard.Api/Dockerfile
     ports:
       - "5000:8080"
     env_file:
       - .env
     volumes:
-      - /home/jassi/deployments/FrenCircleMonoRepo/logs/dotnet:/app/logs/dotnet
-      - /home/jassi/deployments/FrenCircleMonoRepo/cache:/app/cache
+      - /home/jassi/deployments/Linqyard/logs/dotnet:/app/logs/dotnet
+      - /home/jassi/deployments/Linqyard/cache:/app/cache
       
   fastapi:
     build:
