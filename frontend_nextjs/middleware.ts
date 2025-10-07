@@ -2,7 +2,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
-const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'frencircle.com'
+const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'linqyard.com'
 // Add all infra subdomains you do NOT want treated as usernames
 const RESERVED = new Set(['www', 'api', 'util', 'cdn', 'files'])
 
