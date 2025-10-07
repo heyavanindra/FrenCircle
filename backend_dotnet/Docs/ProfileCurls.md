@@ -1,6 +1,6 @@
 # Profile API - cURL Examples
 
-This document provides cURL examples for all ProfileController endpoints in the FrenCircle API.
+This document provides cURL examples for all ProfileController endpoints in the Linqyard API.
 
 ## Base URL
 ```

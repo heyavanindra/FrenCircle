@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 
-namespace FrenCircle.Repositories;
+namespace Linkyard.Repositories;
 
 public class AnalyticsRepository : IAnalyticsRepository
 {

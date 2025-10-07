@@ -1,4 +1,4 @@
-Environment strategy for FrenCircleMonoRepo
+Environment strategy for LinkyardMonoRepo
 =========================================
 
 This document explains how environment variables are handled for local development and production, how Docker Compose uses `.env` / `.env.development`, and what files should be ignored by Git.

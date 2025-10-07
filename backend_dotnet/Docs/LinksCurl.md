@@ -1,6 +1,6 @@
 # Links API - cURL Examples
 
-This document provides cURL examples for the Links endpoints in the FrenCircle API. Per project conventions these examples use the JSON ApiResponse envelope.
+This document provides cURL examples for the Links endpoints in the Linqyard API. Per project conventions these examples use the JSON ApiResponse envelope.
 
 ## Base URL
 ```

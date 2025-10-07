@@ -13,8 +13,8 @@
 {
   "JWT": {
     "SecretKey": "your-256-bit-secret-key-here-make-it-long-and-secure-for-production",
-    "Issuer": "FrenCircle.Api",
-    "Audience": "FrenCircle.Client", 
+    "Issuer": "Linqyard.Api",
+    "Audience": "Linqyard.Client", 
     "ExpiryMinutes": 15,
     "RefreshTokenExpiryDays": 7
   }
@@ -52,7 +52,7 @@ The JWT tokens now include:
 ## Next Steps 
 
 ### Immediate Testing
-1. Run the application: `dotnet run --project FrenCircle.Api`
+1. Run the application: `dotnet run --project Linqyard.Api`
 2. Test registration: Creates user but doesn't auto-login (email verification required)
 3. Test login: Returns full JWT token in AuthResponse
 4. Test refresh: Uses JWT service for new token generation

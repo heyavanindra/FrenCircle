@@ -1,9 +1,9 @@
-# FrenCircle API - Copilot Instructions
+# Linqyard API - Copilot Instructions
 
 ## Architecture Overview
-FrenCircle is a .NET 9 Web API following a clean layered architecture:
-- **FrenCircle.Api**: Main web API project with controllers, middleware, configuration
-- **FrenCircle.Contracts**: Shared contracts (DTOs, responses) referenced by API layer
+Linqyard is a .NET 9 Web API following a clean layered architecture:
+- **Linqyard.Api**: Main web API project with controllers, middleware, configuration
+- **Linqyard.Contracts**: Shared contracts (DTOs, responses) referenced by API layer
 
 ## Key Patterns & Conventions
 
@@ -48,30 +48,30 @@ app.MapControllers();
 dotnet build
 
 # Run API (Development profile)
-dotnet run --project FrenCircle.Api
+dotnet run --project Linqyard.Api
 
 # Run with specific profile
-dotnet run --project FrenCircle.Api --launch-profile https
+dotnet run --project Linqyard.Api --launch-profile https
 ```
 
 ### Docker
 ```powershell
 # Build image
-docker build -t frencircle-api .
+docker build -t Linqyard-api .
 
 # Run container
-docker run -p 8080:8080 -p 8081:8081 frencircle-api
+docker run -p 8080:8080 -p 8081:8081 Linqyard-api
 ```
 
 ## Project Structure Conventions
 - Controllers in `Controllers/` folder, inherit from `BaseApiController`
 - Middleware in `Middleware/` folder with standard naming pattern
-- Responses/DTOs in `FrenCircle.Contracts` project for reusability
+- Responses/DTOs in `Linqyard.Contracts` project for reusability
 - Logs written to `logs/` directory with daily rolling
 
 ## Adding New Features
 1. **New endpoints**: Create controller inheriting `BaseApiController`, use envelope helpers
-2. **New contracts**: Add to `FrenCircle.Contracts` project, use records for immutability  
+2. **New contracts**: Add to `Linqyard.Contracts` project, use records for immutability  
 3. **New middleware**: Follow `CorrelationIdMiddleware` pattern, register in `Program.cs`
 4. **Error handling**: Use ProblemDetails helpers, ensure correlation IDs are included
 

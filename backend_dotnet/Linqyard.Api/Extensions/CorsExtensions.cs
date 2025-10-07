@@ -24,7 +24,7 @@ public static class CorsExtensions
     /// <list type="bullet">
     ///   <item><description><c>http://localhost:3000</c></description></item>
     ///   <item><description><c>https://localhost:3000</c></description></item>
-    ///   <item><description><c>https://frencircle.com</c></description></item>
+    ///   <item><description><c>https://linqyard.com</c></description></item>
     /// </list>
     /// 
     /// It also allows:
@@ -46,7 +46,7 @@ public static class CorsExtensions
         {
             options.AddPolicy(AllowFrontendPolicy, policy =>
             {
-                policy.WithOrigins("http://localhost:3000", "https://localhost:3000", "https://frencircle.com")
+                policy.WithOrigins("http://localhost:3000", "https://localhost:3000", "https://linqyard.com")
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials();
@@ -69,7 +69,7 @@ public static class CorsExtensions
                         try
                         {
                             var host = new Uri(origin).Host;
-                            // allow root domain and any subdomain of frencircle.com
+                            // allow root domain and any subdomain of linqyard.com
                             if (host.Equals("linqyard.com", StringComparison.OrdinalIgnoreCase)) return true;
                             if (host.EndsWith(".linqyard.com", StringComparison.OrdinalIgnoreCase)) return true;
                             // allow localhost for dev (any port)

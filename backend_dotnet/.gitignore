@@ -485,5 +485,5 @@ $RECYCLE.BIN/
 
 #Custom
 
-FrenCircle.Api/logs/*
+Linqyard.Api/logs/*
 logs/

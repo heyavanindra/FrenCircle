@@ -1,4 +1,4 @@
-# FrenCircle API - Authentication Endpoints (JWT)
+# Linqyard API - Authentication Endpoints (JWT)
 
 ## Setup
 Set your host variable: 

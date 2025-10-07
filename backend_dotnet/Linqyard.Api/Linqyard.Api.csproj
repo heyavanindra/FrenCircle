@@ -48,7 +48,6 @@
 		<ProjectReference Include="..\Linqyard.Contracts\Linqyard.Contracts.csproj" />
 		<ProjectReference Include="..\Linqyard.Entities\Linqyard.Entities.csproj" />
 		<ProjectReference Include="..\Linqyard.Infra\Linqyard.Infra.csproj" />
-		<ProjectReference Include="..\FrenCircle.Repositories\Linqyard.Repositories.csproj" />
 		<ProjectReference Include="..\Linqyard.Repositories\Linqyard.Repositories.csproj" />
 	</ItemGroup>
 

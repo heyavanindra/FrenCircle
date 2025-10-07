@@ -91,4 +91,4 @@ services:
 # By default, Compose creates a network; uncomment to name it explicitly
 # networks:
 #   default:
-#     name: frencircle_dev_net
+#     name: linqyard_dev_net

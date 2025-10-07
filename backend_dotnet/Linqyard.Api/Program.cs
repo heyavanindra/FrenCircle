@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
-using FrenCircle.Repositories;
 using Linqyard.Contracts.Interfaces;
+using Linkyard.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 

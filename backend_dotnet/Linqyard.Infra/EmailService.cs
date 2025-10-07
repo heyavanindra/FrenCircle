@@ -48,21 +48,21 @@ namespace Linqyard.Infra
 
         public async Task SendVerificationEmailAsync(string to, string firstName, string verificationCode)
         {
-            var subject = "Verify Your FrenCircle Account";
+            var subject = "Verify Your Linkyard Account";
             var body = GenerateVerificationEmailHtml(firstName, verificationCode);
             await SendEmailAsync(to, subject, body, true);
         }
 
         public async Task SendPasswordResetEmailAsync(string to, string firstName, string resetCode)
         {
-            var subject = "Reset Your FrenCircle Password";
+            var subject = "Reset Your Linkyard Password";
             var body = GeneratePasswordResetEmailHtml(firstName, resetCode);
             await SendEmailAsync(to, subject, body, true);
         }
 
         public async Task SendWelcomeEmailAsync(string to, string firstName)
         {
-            var subject = "Welcome to FrenCircle!";
+            var subject = "Welcome to Linkyard!";
             var body = GenerateWelcomeEmailHtml(firstName);
             await SendEmailAsync(to, subject, body, true);
         }
@@ -89,11 +89,11 @@ namespace Linqyard.Infra
 <body>
     <div class='container'>
         <div class='header'>
-            <h1>🎉 Welcome to FrenCircle!</h1>
+            <h1>🎉 Welcome to Linkyard!</h1>
         </div>
         <div class='content'>
             <h2>Hi {firstName}!</h2>
-            <p>Thanks for joining FrenCircle! To complete your account setup, please verify your email address using the code below:</p>
+            <p>Thanks for joining Linkyard! To complete your account setup, please verify your email address using the code below:</p>
             
             <div class='code'>
                 <p><strong>Your Verification Code:</strong></p>
@@ -102,13 +102,13 @@ namespace Linqyard.Infra
             
             <p>This code will expire in <strong>15 minutes</strong> for security reasons.</p>
             
-            <p>If you didn't create an account with FrenCircle, you can safely ignore this email.</p>
+            <p>If you didn't create an account with Linkyard, you can safely ignore this email.</p>
             
             <p>Welcome aboard!<br>
-            The FrenCircle Team</p>
+            The Linkyard Team</p>
         </div>
         <div class='footer'>
-            <p>© 2025 FrenCircle. All rights reserved.</p>
+            <p>© 2025 Linkyard. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -141,7 +141,7 @@ namespace Linqyard.Infra
         </div>
         <div class='content'>
             <h2>Hi {firstName}!</h2>
-            <p>We received a request to reset your FrenCircle account password. Use the code below to reset your password:</p>
+            <p>We received a request to reset your Linkyard account password. Use the code below to reset your password:</p>
             
             <div class='code'>
                 <p><strong>Your Reset Code:</strong></p>
@@ -160,10 +160,10 @@ namespace Linqyard.Infra
             <p>If you didn't request a password reset, your account is still secure and no action is needed.</p>
             
             <p>Best regards,<br>
-            The FrenCircle Team</p>
+            The Linkyard Team</p>
         </div>
         <div class='footer'>
-            <p>© 2025 FrenCircle. All rights reserved.</p>
+            <p>© 2025 Linkyard. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -177,7 +177,7 @@ namespace Linqyard.Infra
 <html>
 <head>
     <meta charset='utf-8'>
-    <title>Welcome to FrenCircle!</title>
+    <title>Welcome to Linkyard!</title>
     <style>
         body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
         .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
@@ -192,11 +192,11 @@ namespace Linqyard.Infra
 <body>
     <div class='container'>
         <div class='header'>
-            <h1>🎊 Welcome to FrenCircle!</h1>
+            <h1>🎊 Welcome to Linkyard!</h1>
         </div>
         <div class='content'>
             <h2>Hi {firstName}!</h2>
-            <p>Congratulations! Your email has been verified and your FrenCircle account is now active.</p>
+            <p>Congratulations! Your email has been verified and your Linkyard account is now active.</p>
             
             <div class='features'>
                 <h3>🚀 Get Started:</h3>
@@ -206,13 +206,13 @@ namespace Linqyard.Infra
                 <div class='feature'>🌟 Explore communities</div>
             </div>
             
-            <p>We're excited to have you as part of the FrenCircle community!</p>
+            <p>We're excited to have you as part of the Linkyard community!</p>
             
             <p>Happy connecting!<br>
-            The FrenCircle Team</p>
+            The Linkyard Team</p>
         </div>
         <div class='footer'>
-            <p>© 2025 FrenCircle. All rights reserved.</p>
+            <p>© 2025 Linkyard. All rights reserved.</p>
         </div>
     </div>
 </body>
