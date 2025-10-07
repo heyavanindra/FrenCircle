@@ -70,8 +70,8 @@ public static class CorsExtensions
                         {
                             var host = new Uri(origin).Host;
                             // allow root domain and any subdomain of frencircle.com
-                            if (host.Equals("frencircle.com", StringComparison.OrdinalIgnoreCase)) return true;
-                            if (host.EndsWith(".frencircle.com", StringComparison.OrdinalIgnoreCase)) return true;
+                            if (host.Equals("linqyard.com", StringComparison.OrdinalIgnoreCase)) return true;
+                            if (host.EndsWith(".linqyard.com", StringComparison.OrdinalIgnoreCase)) return true;
                             // allow localhost for dev (any port)
                             if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return true;
                             return false;
