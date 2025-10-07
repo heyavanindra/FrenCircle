@@ -138,7 +138,7 @@ export default function Navbar() {
               href="/"
               className="text-base sm:text-lg font-semibold text-foreground hover:opacity-85 transition-opacity"
             >
-              FrenCircle
+              Linqyard
             </Link>
           </div>
 
@@ -306,7 +306,7 @@ export default function Navbar() {
               <SheetContent side="right" className="w-[88vw] max-w-sm p-0" id="mobile-menu">
                 <div className="p-5 border-b">
                   <SheetHeader>
-                    <SheetTitle className="text-lg">FrenCircle</SheetTitle>
+                    <SheetTitle className="text-lg">Linqyard</SheetTitle>
                     <SheetDescription>Navigate through the app</SheetDescription>
                   </SheetHeader>
                 </div>

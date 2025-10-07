@@ -131,7 +131,7 @@ export default function LoginPage() {
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to FrenCircle
+            Back to linqyard
           </Link>
         </motion.div>
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
               
               <CardTitle className="text-2xl font-bold">Sign in to your account</CardTitle>
               <CardDescription className="text-base">
-                Enter your credentials to access FrenCircle
+                Enter your credentials to access linqyard
               </CardDescription>
             </CardHeader>
 

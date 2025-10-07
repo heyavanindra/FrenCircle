@@ -42,8 +42,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug?: st
   
   if (!username) {
     return {
-      title: 'Links — frenCircle',
-      description: 'View links and profile on frenCircle.',
+      title: 'Links — Linqyard',
+      description: 'View links and profile on Linqyard.',
     };
   }
 
@@ -52,12 +52,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug?: st
     ? ([userData.firstName, userData.lastName].filter(Boolean).join(' ') || userData.username)
     : username;
 
-  const title = `${displayName} — frenCircle`;
-  const description = `${displayName}'s frenCircle page: links, socials, and profile.`;
-  const keywords = `frenCircle, links, profile, ${username}`;
+  const title = `${displayName} — Linqyard`;
+  const description = `${displayName}'s Linqyard page: links, socials, and profile.`;
+  const keywords = `Linqyard, links, profile, ${username}`;
   
   // Prefer avatarUrl from API if available; use it verbatim (assumed to be a full URL).
-  const image = userData?.avatarUrl ?? `https://frencircle.com/og/${encodeURIComponent(username)}.png`;
+  const image = userData?.avatarUrl ?? `https://linqyard.com/og/${encodeURIComponent(username)}.png`;
 
   return {
     title,

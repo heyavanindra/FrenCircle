@@ -1,8 +1,8 @@
 // app/lib/seo.ts
 import type { Metadata } from "next";
 
-const SITE_NAME = "FrenCircle";
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://frencircle.com";
+const SITE_NAME = "Linqyard";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://linqyard.com";
 
 const absolute = (path = "/") =>
   new URL(path.startsWith("/") ? path : `/${path}`, BASE_URL);
@@ -18,7 +18,7 @@ type MetaOpts = {
 export function createMetadata(opts: MetaOpts = {}): Metadata {
   const {
     title = SITE_NAME,
-    description = "Build, connect, and monitor your FrenCircle services.",
+    description = "Build, connect, and monitor your Linqyard services.",
     path = "/",
     robotsIndex = true,
     image,
@@ -26,7 +26,7 @@ export function createMetadata(opts: MetaOpts = {}): Metadata {
 
   // Return the raw title. The root layout defines a `title.template` which
   // will compose the page-specific title with the site name. Avoid
-  // pre-composing here to prevent duplication (e.g. "FrenCircle • FrenCircle").
+  // pre-composing here to prevent duplication (e.g. "Linqyard • Linqyard").
   const finalTitle = title;
   const url = absolute(path).toString();
   const ogImage = image

@@ -127,14 +127,14 @@ export default function AboutClient() {
       >
         <motion.div className="space-y-6 max-w-4xl mx-auto" variants={itemVariants}>
           <Badge variant="secondary" className="text-sm px-4 py-2">
-            <Sparkles className="h-4 w-4 mr-2" /> About FrenCircle
+            <Sparkles className="h-4 w-4 mr-2" /> About linqyard
           </Badge>
 
           <motion.h1
             className="text-4xl md:text-6xl font-bold tracking-tight"
             variants={itemVariants}
           >
-            What is FrenCircle?
+            What is linqyard?
           </motion.h1>
 
           <motion.p
@@ -155,7 +155,7 @@ export default function AboutClient() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <a href="mailto:mail@frencircle.com" className="inline-flex items-center">
+              <a href="mailto:mail@linqyard.com" className="inline-flex items-center">
                 Email support <Mail className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -367,7 +367,7 @@ export default function AboutClient() {
           <AccordionItem value="item-4">
             <AccordionTrigger>Where can I ask questions?</AccordionTrigger>
             <AccordionContent>
-              Email <a className="underline" href="mailto:support@frencircle.com">support@frencircle.com</a> or check the docs page for short guides.
+              Email <a className="underline" href="mailto:support@linqyard.com">support@linqyard.com</a> or check the docs page for short guides.
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -376,7 +376,7 @@ export default function AboutClient() {
       {/* Footer */}
       <footer className="container mx-auto px-4 pb-10 text-center text-muted-foreground">
         <p>
-          © {new Date().getFullYear()} FrenCircle. This page is a demo for illustrative purposes only.
+          © {new Date().getFullYear()} linqyard. This page is a demo for illustrative purposes only.
         </p>
       </footer>
     </div>

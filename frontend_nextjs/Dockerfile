@@ -89,7 +89,7 @@ COPY . .
 # ENV NEXT_TELEMETRY_DISABLED 1
 
 # >>> added: expose root domain at build time for middleware (can be overridden at build with --build-arg)
-ARG NEXT_PUBLIC_ROOT_DOMAIN=frencircle.com
+ARG NEXT_PUBLIC_ROOT_DOMAIN=linqyard.com
 ENV NEXT_PUBLIC_ROOT_DOMAIN=$NEXT_PUBLIC_ROOT_DOMAIN
 # >>> added: optional but nice to disable telemetry at build
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -105,7 +105,7 @@ ENV NODE_ENV production
 # ENV NEXT_TELEMETRY_DISABLED 1
 
 # >>> added: ensure middleware has root domain at runtime as well
-ENV NEXT_PUBLIC_ROOT_DOMAIN=frencircle.com
+ENV NEXT_PUBLIC_ROOT_DOMAIN=linqyard.com
 # >>> added: optional telemetry off at runtime
 ENV NEXT_TELEMETRY_DISABLED=1
 

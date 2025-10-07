@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "FrenCircle", template: `%s • FrenCircle` },
+  title: { default: "linqyard", template: `%s • linqyard` },
   description: "All your links in one place.",
 };
 

@@ -1,30 +1,30 @@
 // data/seo/metadetails.ts
 export const siteBase = {
-  name: "FrenCircle",
-  baseUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://frencircle.com",
+  name: "Linqyard",
+  baseUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://linqyard.com",
 };
 
 export const statusMeta = {
   title: "Service Status",
-  description: "Real-time monitoring of FrenCircle services",
+  description: "Real-time monitoring of Linqyard services",
   path: "/status",
 };
 
 export const docsMeta = {
   title: "Docs",
-  description: "FrenCircle documentation",
+  description: "Linqyard documentation",
   path: "/docs",
 };
 
 export const homeMeta = {
   title: "Home",
-  description: "FrenCircle : All your links in one place.",
+  description: "Linqyard : All your links in one place.",
   path: "/",
 };
 
 export const aboutMeta = {
   title: "About",
-  description: "Learn more about FrenCircle",
+  description: "Learn more about Linqyard",
   path: "/about",
 };
 

@@ -18,9 +18,9 @@ interface ServiceStatus extends ServiceBase {
 }
 
 const services: ServiceBase[] = [
-  { name: "Main API", url: "https://api.frencircle.com", description: "Core API services and authentication", icon: "server" },
-  { name: "Utilities API", url: "https://util.frencircle.com", description: "Utility services and helper functions", icon: "zap" },
-  { name: "Database", url: "https://api.frencircle.com", description: "Database connectivity and performance", icon: "database" },
+  { name: "Main API", url: "https://api.linqyard.com", description: "Core API services and authentication", icon: "server" },
+  { name: "Utilities API", url: "https://util.linqyard.com", description: "Utility services and helper functions", icon: "zap" },
+  { name: "Database", url: "https://api.linqyard.com", description: "Database connectivity and performance", icon: "database" },
   { name: "CDN", url: "https://cdn.jsm33t.com", description: "Content delivery network status", icon: "globe" },
 ];
 

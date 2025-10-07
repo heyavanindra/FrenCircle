@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'frencircle.com',
+        hostname: 'linqyard.com',
         port: '',
         pathname: '/og/**',
       },

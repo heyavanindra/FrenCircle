@@ -4,7 +4,7 @@ import { createMetadata } from "@/app/lib/seo";
 
 const privacyMeta = {
   title: "Privacy Policy",
-  description: "Privacy Policy for FrenCircle",
+  description: "Privacy Policy for Linqyard",
   path: "/privacy-policy",
 };
 

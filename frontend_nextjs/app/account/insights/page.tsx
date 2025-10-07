@@ -147,7 +147,7 @@ export default function InsightsPage() {
               <h1 className="text-3xl font-bold">Account Insights</h1>
             </div>
             <p className="text-muted-foreground">
-              Track your activity, engagement, and community presence on FrenCircle
+              Track your activity, engagement, and community presence on linqyard
             </p>
           </motion.div>
 

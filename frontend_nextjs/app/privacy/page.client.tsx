@@ -40,11 +40,11 @@ export default function PrivacyClient() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Privacy Policy — frenCircle.com</CardTitle>
+              <CardTitle>Privacy Policy — linqyard.com</CardTitle>
               <CardDescription>How we collect, use, and protect your information.</CardDescription>
             </CardHeader>
             <CardContent className="prose max-w-none">
-              <p>Welcome to frenCircle.com (“we,” “us,” or “the Service”). This Privacy Policy describes the categories of personal information we collect, how we use it, how we protect it, and the choices available to you.</p>
+              <p>Welcome to linqyard.com (“we,” “us,” or “the Service”). This Privacy Policy describes the categories of personal information we collect, how we use it, how we protect it, and the choices available to you.</p>
 
               <ul className="list-disc pl-5 space-y-3">
                 <li>
@@ -89,7 +89,7 @@ export default function PrivacyClient() {
 
                 <li>
                   <span className="font-semibold">Contact:</span>{' '}
-                  <span>If you have questions or requests regarding your data, please contact: <a href="mailto:mail@frencircle.com" className="underline">mail@frencircle.com</a>.</span>
+                  <span>If you have questions or requests regarding your data, please contact: <a href="mailto:mail@linqyard.com" className="underline">mail@linqyard.com</a>.</span>
                 </li>
               </ul>
             </CardContent>
@@ -97,7 +97,7 @@ export default function PrivacyClient() {
 
           <div className="mt-6 text-sm text-muted-foreground">
             <Separator />
-            <p className="mt-3">Questions? <a href="mailto:mail@frencircle.com" className="underline">mail@frencircle.com</a></p>
+            <p className="mt-3">Questions? <a href="mailto:mail@linqyard.com" className="underline">mail@linqyard.com</a></p>
           </div>
         </motion.div>
       </motion.section>

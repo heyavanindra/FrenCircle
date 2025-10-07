@@ -5,7 +5,7 @@ import TermsClient from "./page.client";
 
 const termsMeta = {
 	title: "Terms & Conditions",
-	description: "Terms & Conditions for FrenCircle",
+	description: "Terms & Conditions for Linqyard",
 	path: "/terms-and-conditions",
 };
 

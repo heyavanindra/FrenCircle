@@ -39,12 +39,12 @@ export default function TermsClient() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Terms & Conditions — frenCircle.com</CardTitle>
+              <CardTitle>Terms & Conditions — linqyard.com</CardTitle>
               <CardDescription>Rules and responsibilities for using the Service.</CardDescription>
             </CardHeader>
             <CardContent className="prose max-w-none">
               <p>Effective Date: [Insert Date]</p>
-              <p>Welcome to frenCircle.com (“frenCircle”, “we”, “us”, or “the Service”). These Terms of Service govern your access to and use of the Service. By using the Service you accept these Terms.</p>
+              <p>Welcome to linqyard.com (“Linqyard”, “we”, “us”, or “the Service”). These Terms of Service govern your access to and use of the Service. By using the Service you accept these Terms.</p>
 
               <ul className="list-disc pl-5 space-y-3">
                 <li>
@@ -89,7 +89,7 @@ export default function TermsClient() {
 
                 <li>
                   <span className="font-semibold">Contact:</span>{' '}
-                  <span>For questions about these Terms, contact: <a href="mailto:support@frencircle.com" className="underline">support@frencircle.com</a>.</span>
+                  <span>For questions about these Terms, contact: <a href="mailto:support@linqyard.com" className="underline">support@linqyard.com</a>.</span>
                 </li>
               </ul>
             </CardContent>
@@ -97,7 +97,7 @@ export default function TermsClient() {
 
           <div className="mt-6 text-sm text-muted-foreground">
             <Separator />
-            <p className="mt-3">Questions? <a href="mailto:support@frencircle.com" className="underline">support@frencircle.com</a></p>
+            <p className="mt-3">Questions? <a href="mailto:support@linqyard.com" className="underline">support@linqyard.com</a></p>
           </div>
         </motion.div>
       </motion.section>

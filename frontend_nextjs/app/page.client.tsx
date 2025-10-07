@@ -95,7 +95,7 @@ function DeviceMockup() {
                     <Sparkles className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">FrenCircle</p>
+                    <p className="text-sm text-muted-foreground">linqyard</p>
                     <p className="text-base font-semibold">@yourname</p>
                   </div>
                 </div>
@@ -312,7 +312,7 @@ export default function HomeClient() {
 
       {/* Footer */}
       <footer className="container mx-auto px-4 pb-10 text-center text-muted-foreground">
-        <p>© {new Date().getFullYear()} FrenCircle. This page is a demo for illustrative purposes only.</p>
+        <p>© {new Date().getFullYear()} linqyard. This page is a demo for illustrative purposes only.</p>
       </footer>
     </div>
   );

@@ -171,7 +171,7 @@ export default function SignupPage() {
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to FrenCircle
+            Back to linqyard
           </Link>
         </motion.div>
 
@@ -181,13 +181,13 @@ export default function SignupPage() {
               <div className="mx-auto">
                 <Badge variant="secondary" className="px-3 py-1">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Join FrenCircle
+                  Join linqyard
                 </Badge>
               </div>
               
               <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
               <CardDescription className="text-base">
-                Get started with FrenCircle today
+                Get started with linqyard today
               </CardDescription>
             </CardHeader>
 

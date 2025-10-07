@@ -34,7 +34,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 // Storage keys
-const USER_STORAGE_KEY = 'frencircle_user';
+const USER_STORAGE_KEY = 'linqyard_user';
 
 // Default user state
 const defaultUser: User | null = null;
@@ -211,7 +211,7 @@ export function UserProvider({ children }: UserProviderProps) {
     const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
     if (refreshToken) {
       // Fire-and-forget: kick off the request but don't await it so UI can continue
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com'}/auth/logout`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.linqyard.com'}/auth/logout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -5,7 +5,7 @@ import { ApiConfig, ApiResponse, ApiError, RequestConfig, RefreshTokenResponse }
 // This prevents the frontend from silently calling an unexpected production URL
 // when environment variables were not set at build/runtime.
 const DEFAULT_CONFIG: ApiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.frencircle.com',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://api.linqyard.com',
   timeout: 100000, // 100 seconds
   headers: {
     'Content-Type': 'application/json',
@@ -156,13 +156,13 @@ class ApiService {
         localStorage.setItem('refreshToken', data.data.refreshToken);
         
         // Update user expiry time in localStorage if user exists
-        const existingUser = localStorage.getItem('frencircle_user');
+        const existingUser = localStorage.getItem('linqyard_user');
         if (existingUser) {
           try {
             const userData = JSON.parse(existingUser);
             userData.expiry = data.data.expiresAt;
             userData.login = true; // Ensure login status is maintained
-            localStorage.setItem('frencircle_user', JSON.stringify(userData));
+            localStorage.setItem('linqyard_user', JSON.stringify(userData));
             console.log('Updated user expiry time and login status');
           } catch (error) {
             console.error('Error updating user expiry:', error);
@@ -193,7 +193,7 @@ class ApiService {
     try {
       // Check if we have a token but no user data
       const hasToken = this.hasToken();
-      const existingUser = localStorage.getItem('frencircle_user');
+      const existingUser = localStorage.getItem('linqyard_user');
       
       if (hasToken && !existingUser) {
         console.log('Token found but no user data - fetching profile to restore session');
@@ -215,7 +215,7 @@ class ApiService {
             preferences: userData.preferences
           };
           
-          localStorage.setItem('frencircle_user', JSON.stringify(restoredUser));
+          localStorage.setItem('linqyard_user', JSON.stringify(restoredUser));
           console.log('User session automatically restored to localStorage');
           
           // Trigger a custom event to notify the UserContext

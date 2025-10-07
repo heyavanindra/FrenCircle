@@ -53,7 +53,7 @@ function SidebarNav() {
     <div className="h-full flex flex-col">
       <div className="px-3 py-3">
         <Badge variant="secondary" className="px-2">Docs</Badge>
-        <h2 className="mt-2 text-lg font-semibold">FrenCircle</h2>
+        <h2 className="mt-2 text-lg font-semibold">linqyard</h2>
         <p className="text-sm text-muted-foreground">Demo documentation</p>
       </div>
       <Separator />
@@ -74,7 +74,7 @@ function SidebarNav() {
       </div>
       <Separator />
       <div className="p-3 text-xs text-muted-foreground">
-        Need help? <a href="mailto:support@frencircle.com" className="underline">Email support</a>
+        Need help? <a href="mailto:support@linqyard.com" className="underline">Email support</a>
       </div>
     </div>
   );
@@ -92,7 +92,7 @@ export default function DocsPageClient() {
       >
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Link href="/" className="font-semibold">FrenCircle</Link>
+            <Link href="/" className="font-semibold">linqyard</Link>
             <span className="mx-2 text-muted-foreground">/</span>
             <span className="text-muted-foreground">Docs</span>
           </div>
@@ -120,7 +120,7 @@ export default function DocsPageClient() {
             <motion.div className="mb-6" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={sectionVariants}>
               <h1 className="text-3xl md:text-5xl font-bold tracking-tight">Documentation</h1>
               <p className="mt-2 text-muted-foreground max-w-2xl">
-                Short, practical guidance to get started with the FrenCircle demo.
+                Short, practical guidance to get started with the linqyard demo.
                 The docs intentionally use neutral tone—no bold claims.
               </p>
             </motion.div>
@@ -145,7 +145,7 @@ export default function DocsPageClient() {
                   <div>
                     <p className="mb-2 text-sm font-medium">Example URL structure</p>
                     <pre className="rounded-md border bg-muted/30 p-3 text-xs overflow-x-auto">
-                      <code>https://frencircle.com/u/&lt;your-handle&gt;</code>
+                      <code>https://linqyard.com/u/&lt;your-handle&gt;</code>
                     </pre>
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -238,7 +238,7 @@ export default function DocsPageClient() {
 
       {/* Page footer */}
       <motion.footer className="container mx-auto px-4 pb-8 text-center text-muted-foreground" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={footerVariants}>
-        <p>© {new Date().getFullYear()} FrenCircle. Demo documentation for illustrative purposes only.</p>
+        <p>© {new Date().getFullYear()} linqyard. Demo documentation for illustrative purposes only.</p>
       </motion.footer>
     </div>
   );

@@ -20,7 +20,7 @@ export function middleware(req: NextRequest) {
         return NextResponse.rewrite(url)
       }
       // (Optional) If you want every path to be scoped under /links/<sub>,
-      // uncomment this block to support things like username.frencircle.com/about
+      // uncomment this block to support things like username.linqyard.com/about
       /*
       if (!url.pathname.startsWith('/_next')) {
         url.pathname = `/links/${sub}${url.pathname}`

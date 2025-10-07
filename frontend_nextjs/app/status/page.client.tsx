@@ -161,7 +161,7 @@ export default function StatusClient({ initialStatuses }: { initialStatuses: Ser
         transition={{ duration: 0.6 }}
       >
         <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">System Status</h1>
-        <p className="text-xl text-muted-foreground mb-6">Real-time monitoring of FrenCircle services</p>
+        <p className="text-xl text-muted-foreground mb-6">Real-time monitoring of Linqyard services</p>
 
         <Card className="max-w-md mx-auto mb-8">
           <CardContent className="p-6">
