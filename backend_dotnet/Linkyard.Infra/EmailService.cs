@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using System.Text;
-using Linkyard.Infra.Configuration;
+using Linqyard.Infra.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Linkyard.Infra
+namespace Linqyard.Infra
 {
     public class EmailService : IEmailService
     {

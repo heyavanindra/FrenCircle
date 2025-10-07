@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Linkyard.Api.Migrations
+namespace Linqyard.Api.Migrations
 {
     /// <inheritdoc />
     public partial class AddCoverArt : Migration

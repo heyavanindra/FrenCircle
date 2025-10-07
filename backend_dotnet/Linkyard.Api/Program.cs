@@ -1,17 +1,17 @@
 ﻿using Serilog;
 using Serilog.Exceptions;
-using Linkyard.Api.Middleware; // for CorrelationIdMiddleware
-using Linkyard.Api.Data;
-using Linkyard.Api.Configuration;
-using Linkyard.Api.Services;
-using Linkyard.Api.Extensions; // added for custom CORS
+using Linqyard.Api.Middleware; // for CorrelationIdMiddleware
+using Linqyard.Api.Data;
+using Linqyard.Api.Configuration;
+using Linqyard.Api.Services;
+using Linqyard.Api.Extensions; // added for custom CORS
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 using FrenCircle.Repositories;
-using Linkyard.Contracts.Interfaces;
+using Linqyard.Contracts.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +20,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration) // read from appsettings.json
     .Enrich.FromLogContext()
     .Enrich.WithExceptionDetails()
-    .Enrich.WithProperty("Application", "Linkyard.Api")
+    .Enrich.WithProperty("Application", "Linqyard.Api")
     .CreateLogger();
 
 builder.Host.UseSerilog((ctx, services, cfg) =>
@@ -50,14 +50,14 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddHttpClient();
 
 // Email Service Configuration
-builder.Services.Configure<Linkyard.Infra.Configuration.SmtpSettings>(
+builder.Services.Configure<Linqyard.Infra.Configuration.SmtpSettings>(
     builder.Configuration.GetSection("Email:Smtp"));
-builder.Services.AddScoped<Linkyard.Infra.IEmailService, Linkyard.Infra.EmailService>();
+builder.Services.AddScoped<Linqyard.Infra.IEmailService, Linqyard.Infra.EmailService>();
 
 // Cloudinary Service Configuration
-builder.Services.Configure<Linkyard.Infra.Configuration.CloudinarySettings>(
+builder.Services.Configure<Linqyard.Infra.Configuration.CloudinarySettings>(
     builder.Configuration.GetSection("Cloudinary"));
-builder.Services.AddScoped<Linkyard.Infra.ICloudinaryService, Linkyard.Infra.CloudinaryService>();
+builder.Services.AddScoped<Linqyard.Infra.ICloudinaryService, Linqyard.Infra.CloudinaryService>();
 
 // Repository Services
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -103,12 +103,12 @@ app.MapControllers();
 // --- 4. Start app with safe logging ---
 try
 {
-    Log.Information("Starting Linkyard.Api...");
+    Log.Information("Starting Linqyard.Api...");
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Linkyard.Api terminated unexpectedly");
+    Log.Fatal(ex, "Linqyard.Api terminated unexpectedly");
 }
 finally
 {

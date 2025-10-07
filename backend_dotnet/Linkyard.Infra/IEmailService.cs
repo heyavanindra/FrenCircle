@@ -1,4 +1,4 @@
-﻿namespace Linkyard.Infra
+﻿namespace Linqyard.Infra
 {
     public interface IEmailService
     {

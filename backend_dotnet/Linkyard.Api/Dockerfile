@@ -12,22 +12,22 @@
 # FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 # ARG BUILD_CONFIGURATION=Release
 # WORKDIR /src
-# COPY ["Linkyard.Api/Linkyard.Api.csproj", "Linkyard.Api/"]
-# RUN dotnet restore "./Linkyard.Api/Linkyard.Api.csproj"
+# COPY ["Linqyard.Api/Linqyard.Api.csproj", "Linqyard.Api/"]
+# RUN dotnet restore "./Linqyard.Api/Linqyard.Api.csproj"
 # COPY . .
-# WORKDIR "/src/Linkyard.Api"
-# RUN dotnet build "./Linkyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+# WORKDIR "/src/Linqyard.Api"
+# RUN dotnet build "./Linqyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # # This stage is used to publish the service project to be copied to the final stage
 # FROM build AS publish
 # ARG BUILD_CONFIGURATION=Release
-# RUN dotnet publish "./Linkyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# RUN dotnet publish "./Linqyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 # FROM base AS final
 # WORKDIR /app
 # COPY --from=publish /app/publish .
-# ENTRYPOINT ["dotnet", "Linkyard.Api.dll"]
+# ENTRYPOINT ["dotnet", "Linqyard.Api.dll"]
 
 # See https://aka.ms/customizecontainer ...
 
@@ -53,16 +53,16 @@ USER ${APP_UID}
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Linkyard.Api/Linkyard.Api.csproj", "Linkyard.Api/"]
-RUN dotnet restore "./Linkyard.Api/Linkyard.Api.csproj"
+COPY ["Linqyard.Api/Linqyard.Api.csproj", "Linqyard.Api/"]
+RUN dotnet restore "./Linqyard.Api/Linqyard.Api.csproj"
 COPY . .
-WORKDIR "/src/Linkyard.Api"
-RUN dotnet build "./Linkyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Linqyard.Api"
+RUN dotnet build "./Linqyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Linkyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Linqyard.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Final
 FROM base AS final
@@ -73,4 +73,4 @@ RUN mkdir -p /app/logs/dotnet && chown -R ${APP_UID}:${APP_UID} /app/logs
 USER ${APP_UID}
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Linkyard.Api.dll"]
+ENTRYPOINT ["dotnet", "Linqyard.Api.dll"]

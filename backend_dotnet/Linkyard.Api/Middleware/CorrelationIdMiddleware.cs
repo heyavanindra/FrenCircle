@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Primitives;
 using System.Threading.Tasks;
 
-namespace Linkyard.Api.Middleware;
+namespace Linqyard.Api.Middleware;
 
 public sealed class CorrelationIdMiddleware
 {

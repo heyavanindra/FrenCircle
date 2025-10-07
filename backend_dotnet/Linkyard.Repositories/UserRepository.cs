@@ -2,8 +2,8 @@
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using Linkyard.Contracts.Interfaces;
-using Linkyard.Contracts.Responses;
+using Linqyard.Contracts.Interfaces;
+using Linqyard.Contracts.Responses;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;

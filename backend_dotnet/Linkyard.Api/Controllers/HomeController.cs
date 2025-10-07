@@ -1,10 +1,10 @@
-﻿using Linkyard.Contracts;
-using Linkyard.Contracts.Responses;
+﻿using Linqyard.Contracts;
+using Linqyard.Contracts.Responses;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 [Route("")]
 public sealed class HomeController : BaseApiController

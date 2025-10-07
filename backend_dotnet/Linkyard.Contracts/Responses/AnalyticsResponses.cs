@@ -1,6 +1,6 @@
 using System;
 
-namespace Linkyard.Contracts.Responses;
+namespace Linqyard.Contracts.Responses;
 
 public record LinkClickCountResponse(Guid LinkId, long Clicks);
 

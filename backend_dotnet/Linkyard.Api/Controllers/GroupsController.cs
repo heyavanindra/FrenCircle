@@ -1,14 +1,14 @@
-using Linkyard.Api.Data;
-using Linkyard.Contracts.Requests;
-using Linkyard.Contracts.Responses;
-using Linkyard.Contracts;
-using Linkyard.Entities;
+using Linqyard.Api.Data;
+using Linqyard.Contracts.Requests;
+using Linqyard.Contracts.Responses;
+using Linqyard.Contracts;
+using Linqyard.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 // DTO for group resequence payload
 public record GroupResequenceItemRequest(Guid Id, int Sequence);

@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Linkyard.Entities;
+using Linqyard.Entities;
 using System.Net;
 
-namespace Linkyard.Api.Data;
+namespace Linqyard.Api.Data;
 
 public class LinqyardDbContext : DbContext
 {

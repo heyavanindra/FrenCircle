@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Linkyard.Contracts.Responses
+namespace Linqyard.Contracts.Responses
 {
     public record GoogleUserInfo(
        string Id,

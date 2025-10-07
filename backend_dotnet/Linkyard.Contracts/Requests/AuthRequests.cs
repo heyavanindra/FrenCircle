@@ -1,4 +1,4 @@
-namespace Linkyard.Contracts.Requests;
+namespace Linqyard.Contracts.Requests;
 
 public sealed record LoginRequest(
     string EmailOrUsername,  // Can be either email or username

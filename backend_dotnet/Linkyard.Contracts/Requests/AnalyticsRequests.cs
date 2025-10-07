@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace Linkyard.Contracts.Requests;
+namespace Linqyard.Contracts.Requests;
 
 public record RecordLinkClickRequest(
     Guid Id,

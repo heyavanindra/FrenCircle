@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Linkyard.Contracts\Linkyard.Contracts.csproj" />
+    <ProjectReference Include="..\Linqyard.Contracts\Linqyard.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,10 +1,10 @@
-﻿using Linkyard.Contracts;
+﻿using Linqyard.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using System.Security.Claims;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 /// <summary>
 /// Base API controller providing common helpers for request context,

@@ -45,11 +45,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Linkyard.Contracts\Linkyard.Contracts.csproj" />
-		<ProjectReference Include="..\Linkyard.Entities\Linkyard.Entities.csproj" />
-		<ProjectReference Include="..\Linkyard.Infra\Linkyard.Infra.csproj" />
-		<ProjectReference Include="..\FrenCircle.Repositories\Linkyard.Repositories.csproj" />
-		<ProjectReference Include="..\LinkYard.Repositories\Linkyard.Repositories.csproj" />
+		<ProjectReference Include="..\Linqyard.Contracts\Linqyard.Contracts.csproj" />
+		<ProjectReference Include="..\Linqyard.Entities\Linqyard.Entities.csproj" />
+		<ProjectReference Include="..\Linqyard.Infra\Linqyard.Infra.csproj" />
+		<ProjectReference Include="..\FrenCircle.Repositories\Linqyard.Repositories.csproj" />
+		<ProjectReference Include="..\Linqyard.Repositories\Linqyard.Repositories.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

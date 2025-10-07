@@ -1,11 +1,11 @@
-using Linkyard.Api.Configuration;
+using Linqyard.Api.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Security.Claims;
 using System.Text;
 
-namespace Linkyard.Api.Extensions;
+namespace Linqyard.Api.Extensions;
 
 /// <summary>
 /// Provides extension methods for configuring JWT authentication and authorization.

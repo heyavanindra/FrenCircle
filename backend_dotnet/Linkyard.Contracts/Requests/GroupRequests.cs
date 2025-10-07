@@ -1,4 +1,4 @@
-namespace Linkyard.Contracts.Requests;
+namespace Linqyard.Contracts.Requests;
 
 public sealed record CreateGroupRequest(
     string Name,

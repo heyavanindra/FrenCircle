@@ -1,12 +1,12 @@
-using Linkyard.Api.Configuration;
-using Linkyard.Entities;
+using Linqyard.Api.Configuration;
+using Linqyard.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace Linkyard.Api.Services;
+namespace Linqyard.Api.Services;
 
 public class JwtService : IJwtService
 {

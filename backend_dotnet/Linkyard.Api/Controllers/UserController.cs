@@ -1,11 +1,11 @@
-using Linkyard.Contracts.Interfaces;
-using Linkyard.Contracts.Responses;
-using Linkyard.Contracts;
+using Linqyard.Contracts.Interfaces;
+using Linqyard.Contracts.Responses;
+using Linqyard.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 [Route("user")]
 [ApiController]

@@ -1,12 +1,12 @@
 using System;
-using Linkyard.Api.Data;
+using Linqyard.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Linkyard.Api.Extensions
+namespace Linqyard.Api.Extensions
 {
     /// <summary>
     /// Provides extension methods for registering the <see cref="LinqyardDbContext"/> in the
@@ -19,7 +19,7 @@ namespace Linkyard.Api.Extensions
     ///     <description>Uses the <c>"DefaultConnection"</c> connection string from configuration.</description>
     ///   </item>
     ///   <item>
-    ///     <description>Sets EF Core migrations assembly to <c>Linkyard.Api</c>.</description>
+    ///     <description>Sets EF Core migrations assembly to <c>Linqyard.Api</c>.</description>
     ///   </item>
     ///   <item>
     ///     <description>Enables retry on transient failures (max 3 retries, 5-second delay).</description>
@@ -65,7 +65,7 @@ namespace Linkyard.Api.Extensions
             {
                 options.UseNpgsql(connectionString, npgsqlOptions =>
                 {
-                    npgsqlOptions.MigrationsAssembly("Linkyard.Api");
+                    npgsqlOptions.MigrationsAssembly("Linqyard.Api");
                     npgsqlOptions.EnableRetryOnFailure(
                         maxRetryCount: 3,
                         maxRetryDelay: TimeSpan.FromSeconds(5),

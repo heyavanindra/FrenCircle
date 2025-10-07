@@ -1,4 +1,4 @@
-﻿namespace Linkyard.Entities
+﻿namespace Linqyard.Entities
 {
     public class Test
     {

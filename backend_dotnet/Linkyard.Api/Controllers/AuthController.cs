@@ -1,18 +1,18 @@
 ﻿using BCrypt.Net;
-using Linkyard.Api.Configuration;
-using Linkyard.Api.Data;
-using Linkyard.Api.Services;
-using Linkyard.Contracts;
-using Linkyard.Contracts.Requests;
-using Linkyard.Contracts.Responses;
-using Linkyard.Entities;
+using Linqyard.Api.Configuration;
+using Linqyard.Api.Data;
+using Linqyard.Api.Services;
+using Linqyard.Contracts;
+using Linqyard.Contracts.Requests;
+using Linqyard.Contracts.Responses;
+using Linqyard.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 [Route("auth")]
 public sealed class AuthController : BaseApiController
@@ -22,7 +22,7 @@ public sealed class AuthController : BaseApiController
     private readonly IConfiguration _configuration;
     private readonly IJwtService _jwtService;
     private readonly HttpClient _httpClient;
-    private readonly Linkyard.Infra.IEmailService _emailService;
+    private readonly Linqyard.Infra.IEmailService _emailService;
 
     public AuthController(
         ILogger<AuthController> logger,
@@ -30,7 +30,7 @@ public sealed class AuthController : BaseApiController
         IConfiguration configuration,
         IJwtService jwtService,
         HttpClient httpClient,
-        Linkyard.Infra.IEmailService emailService)
+        Linqyard.Infra.IEmailService emailService)
     {
         _logger = logger;
         _context = context;
@@ -1010,7 +1010,7 @@ public sealed class AuthController : BaseApiController
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> SetPassword([FromBody] Linkyard.Contracts.Requests.SetPasswordRequest request, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> SetPassword([FromBody] Linqyard.Contracts.Requests.SetPasswordRequest request, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("SetPassword attempt for {Email} with CorrelationId {CorrelationId}", request.Email, CorrelationId);
 

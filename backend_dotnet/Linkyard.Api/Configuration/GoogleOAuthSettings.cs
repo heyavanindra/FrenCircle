@@ -1,4 +1,4 @@
-namespace Linkyard.Api.Configuration;
+namespace Linqyard.Api.Configuration;
 
 public class GoogleOAuthSettings
 {

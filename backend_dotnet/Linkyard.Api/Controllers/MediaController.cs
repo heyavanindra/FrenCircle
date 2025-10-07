@@ -1,16 +1,16 @@
 ﻿using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Linkyard.Contracts;
-using Linkyard.Contracts.Interfaces;
-using Linkyard.Contracts.Requests;
-using Linkyard.Contracts.Responses;
-using Linkyard.Infra;
+using Linqyard.Contracts;
+using Linqyard.Contracts.Interfaces;
+using Linqyard.Contracts.Requests;
+using Linqyard.Contracts.Responses;
+using Linqyard.Infra;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 [Route("media")]
 [Authorize]

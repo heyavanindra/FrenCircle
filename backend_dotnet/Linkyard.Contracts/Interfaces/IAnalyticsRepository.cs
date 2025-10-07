@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Linkyard.Contracts.Requests;
-using Linkyard.Contracts.Responses;
+using Linqyard.Contracts.Requests;
+using Linqyard.Contracts.Responses;
 
-namespace Linkyard.Contracts.Interfaces;
+namespace Linqyard.Contracts.Interfaces;
 
 public interface IAnalyticsRepository
 {

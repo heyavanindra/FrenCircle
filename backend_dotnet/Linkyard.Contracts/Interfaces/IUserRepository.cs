@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Linkyard.Contracts.Responses;
+using Linqyard.Contracts.Responses;
 
-namespace Linkyard.Contracts.Interfaces;
+namespace Linqyard.Contracts.Interfaces;
 
 public interface IUserRepository
 {

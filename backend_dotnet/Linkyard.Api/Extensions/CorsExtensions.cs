@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Linkyard.Api.Extensions;
+namespace Linqyard.Api.Extensions;
 
 /// <summary>
 /// Provides extension methods for configuring and applying custom CORS policies.

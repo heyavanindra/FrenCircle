@@ -1,7 +1,7 @@
-using Linkyard.Entities;
+using Linqyard.Entities;
 using System.Security.Claims;
 
-namespace Linkyard.Api.Services;
+namespace Linqyard.Api.Services;
 
 public interface IJwtService
 {

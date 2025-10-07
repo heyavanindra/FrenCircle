@@ -1,7 +1,7 @@
 ﻿using System.Net;
-using Linkyard.Contracts.Interfaces;
-using Linkyard.Contracts.Requests;
-using Linkyard.Contracts.Responses;
+using Linqyard.Contracts.Interfaces;
+using Linqyard.Contracts.Requests;
+using Linqyard.Contracts.Responses;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;

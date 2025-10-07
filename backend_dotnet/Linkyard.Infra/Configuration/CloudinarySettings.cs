@@ -1,4 +1,4 @@
-﻿namespace Linkyard.Infra.Configuration
+﻿namespace Linqyard.Infra.Configuration
 {
     public class CloudinarySettings
     {

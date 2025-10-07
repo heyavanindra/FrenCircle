@@ -1,14 +1,14 @@
-using Linkyard.Contracts.Interfaces;
-using Linkyard.Contracts;
-using Linkyard.Contracts.Requests;
+using Linqyard.Contracts.Interfaces;
+using Linqyard.Contracts;
+using Linqyard.Contracts.Requests;
 using Microsoft.AspNetCore.Http;
-using Linkyard.Contracts.Responses;
+using Linqyard.Contracts.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 [Route("profile")]
 [Authorize]

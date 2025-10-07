@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Linkyard.Entities;
+namespace Linqyard.Entities;
 
 public class Role
 {

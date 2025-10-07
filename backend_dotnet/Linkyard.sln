@@ -3,15 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11010.61
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linkyard.Api", "LinkYard.Api\Linkyard.Api.csproj", "{FEF46195-B334-4318-B33A-36143B0A51D5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqyard.Api", "Linqyard.Api\Linqyard.Api.csproj", "{FEF46195-B334-4318-B33A-36143B0A51D5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linkyard.Contracts", "LinkYard.Contracts\Linkyard.Contracts.csproj", "{AB0F4D81-AED1-484F-8D40-51A6BEEB7191}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqyard.Contracts", "Linqyard.Contracts\Linqyard.Contracts.csproj", "{AB0F4D81-AED1-484F-8D40-51A6BEEB7191}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linkyard.Entities", "LinkYard.Entities\Linkyard.Entities.csproj", "{A8F2C895-DDF2-4B06-B416-B5AADBB6CF62}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqyard.Entities", "Linqyard.Entities\Linqyard.Entities.csproj", "{A8F2C895-DDF2-4B06-B416-B5AADBB6CF62}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linkyard.Infra", "LinkYard.Infra\Linkyard.Infra.csproj", "{7DC5A45D-7B3B-47DE-A933-7744A8CBDCBE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqyard.Infra", "Linqyard.Infra\Linqyard.Infra.csproj", "{7DC5A45D-7B3B-47DE-A933-7744A8CBDCBE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linkyard.Repositories", "LinkYard.Repositories\Linkyard.Repositories.csproj", "{0880AD8D-D7D5-41AF-AD39-0AFFDD52DC48}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqyard.Repositories", "Linqyard.Repositories\Linqyard.Repositories.csproj", "{0880AD8D-D7D5-41AF-AD39-0AFFDD52DC48}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

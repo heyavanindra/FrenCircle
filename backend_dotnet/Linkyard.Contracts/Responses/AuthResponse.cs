@@ -1,4 +1,4 @@
-﻿namespace Linkyard.Contracts.Responses;
+﻿namespace Linqyard.Contracts.Responses;
 
 public sealed record AuthResponse(
     string AccessToken,

@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
-using Linkyard.Contracts;
-using Linkyard.Contracts.Interfaces;
-using Linkyard.Contracts.Requests;
-using Linkyard.Contracts.Responses;
+using Linqyard.Contracts;
+using Linqyard.Contracts.Interfaces;
+using Linqyard.Contracts.Requests;
+using Linqyard.Contracts.Responses;
 using System.Net;
 using Microsoft.Extensions.Primitives;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Linkyard.Api.Controllers;
+namespace Linqyard.Api.Controllers;
 
 public record ClickPayload(string? fp, LocationDto? location);
 public record LocationDto(CoordsDto? coords);
