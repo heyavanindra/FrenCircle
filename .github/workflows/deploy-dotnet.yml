@@ -60,8 +60,8 @@ jobs:
             git clean -fd -e logs/
             git pull --ff-only
 
-            DOCKER_BUILDKIT=1 docker compose -p frencircle up -d --build --remove-orphans dotnet
-            docker compose -p frencircle ps
+            DOCKER_BUILDKIT=1 docker compose -p linqyard up -d --build --remove-orphans dotnet
+            docker compose -p linqyard ps
           '" || echo '[dotnet] Build or deploy failed'
 
       - name: Show recent service logs (shared lock)
@@ -80,7 +80,7 @@ jobs:
             # Shared lock to avoid colliding with an active deploy; wait up to 2 minutes
             if flock -s -w 120 9; then
               cd \"${REMOTE_DIR}\"
-              docker compose -p frencircle logs dotnet --since=5m || true
+              docker compose -p linqyard logs dotnet --since=5m || true
             else
               echo \"[dotnet] Skipping logs: could not acquire shared lock within 2 minutes\" >&2
             fi
